@@ -1,89 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %> - Webuzo SaaS</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <style>
-        .navbar-custom {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-        .stats-card {
-            transition: transform 0.2s;
-            border: none;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .stats-card:hover {
-            transform: translateY(-2px);
-        }
-        .card {
-            border: none;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-    </style>
-</head>
+<%- include('../partials/head') %>
 <body>
-    <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom">
-        <div class="container">
-            <a class="navbar-brand" href="/user/dashboard">
-                <i class="fas fa-server me-2"></i>Webuzo SaaS - Executive
-            </a>
-            
-            <div class="navbar-nav me-auto">
-                <a class="nav-link" href="/user/dashboard">
-                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
-                </a>
-                <a class="nav-link" href="/user/databases">
-                    <i class="fas fa-database me-1"></i>My Databases
-                </a>
-                <a class="nav-link" href="/user/commissions">
-                    <i class="fas fa-percentage me-1"></i>Commissions
-                </a>
-                <a class="nav-link" href="/user/payments">
-                    <i class="fas fa-credit-card me-1"></i>Payments
-                </a>
-            </div>
-            
-            <div class="navbar-nav ms-auto">
-                <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-user me-1"></i><%= user.full_name %>
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="/change-password">
-                            <i class="fas fa-key me-2"></i>Change Password
-                        </a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <form action="/logout" method="POST" class="d-inline">
-                                <button type="submit" class="dropdown-item">
-                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
-                                </button>
-                            </form>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Flash Messages -->
-    <% if (typeof success_msg !== 'undefined' && success_msg.length > 0) { %>
-        <div class="alert alert-success alert-dismissible fade show m-3" role="alert">
-            <%= success_msg %>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <% } %>
-
-    <% if (typeof error_msg !== 'undefined' && error_msg.length > 0) { %>
-        <div class="alert alert-danger alert-dismissible fade show m-3" role="alert">
-            <%= error_msg %>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    <% } %>
+    <%- include('../partials/navbar-user', { currentPage: 'dashboard' }) %>
+    <%- include('../partials/flash-messages') %>
 
     <div class="container mt-4">
         <!-- Welcome Message -->
@@ -254,6 +174,6 @@
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <%- include('../partials/scripts') %>
 </body>
 </html> 
