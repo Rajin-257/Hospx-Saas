@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Webuzo SaaS</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .navbar-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card {
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .table th {
+            background-color: #f8f9fa;
+            border-top: none;
+        }
+        .expiry-badge {
+            font-size: 0.75rem;
+        }
+        .database-stats {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom">
+        <div class="container">
+            <a class="navbar-brand" href="/admin/dashboard">
+                <i class="fas fa-server me-2"></i>Hospx
+            </a>
+            
+            <div class="navbar-nav me-auto">
+                <a class="nav-link" href="/admin/dashboard">
+                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                </a>
+                <a class="nav-link" href="/admin/users">
+                    <i class="fas fa-users me-1"></i>Users
+                </a>
+                <a class="nav-link active" href="/admin/databases">
+                    <i class="fas fa-database me-1"></i>Databases
+                </a>
+                <a class="nav-link" href="/admin/payments">
+                    <i class="fas fa-credit-card me-1"></i>Payments
+                </a>
+                <a class="nav-link" href="/admin/commissions">
+                    <i class="fas fa-percentage me-1"></i>Commissions
+                </a>
+                <a class="nav-link" href="/admin/reports">
+                    <i class="fas fa-chart-bar me-1"></i>Reports
+                </a>
+            </div>
+            
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user me-1"></i><%= user.full_name %>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/change-password">
+                            <i class="fas fa-key me-2"></i>Change Password
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form action="/logout" method="POST" class="d-inline">
+                                <button type="submit" class="dropdown-item">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <% if (typeof success_msg !== 'undefined' && success_msg.length > 0) { %>
+        <div class="alert alert-success alert-dismissible fade show m-3" role="alert">
+            <%= success_msg %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <% } %>
+
+    <% if (typeof error_msg !== 'undefined' && error_msg.length > 0) { %>
+        <div class="alert alert-danger alert-dismissible fade show m-3" role="alert">
+            <%= error_msg %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <% } %>
+
+    <div class="container mt-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2><i class="fas fa-database me-2"></i>Database Management</h2>
+                        <p class="text-muted">Manage all databases and their expiry dates</p>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-xl-3 col-md-6">
+                <div class="card">
+                    <div class="card-body database-stats">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-primary"><%= stats.total_databases %></h4>
+                                <p class="mb-0">Total Databases</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-database fa-2x text-primary"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6">
+                <div class="card">
+                    <div class="card-body database-stats">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-success"><%= stats.active_databases %></h4>
+                                <p class="mb-0">Active Databases</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-check-circle fa-2x text-success"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6">
+                <div class="card">
+                    <div class="card-body database-stats">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-warning"><%= stats.expiring_soon %></h4>
+                                <p class="mb-0">Expiring Soon</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6">
+                <div class="card">
+                    <div class="card-body database-stats">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-danger"><%= stats.expired_databases %></h4>
+                                <p class="mb-0">Expired</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-times-circle fa-2x text-danger"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <form method="GET" action="/admin/databases">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-3">
+                                    <label for="status" class="form-label">Status</label>
+                                    <select class="form-select" id="status" name="status">
+                                        <option value="">All Status</option>
+                                        <option value="active" <%= filters.status === 'active' ? 'selected' : '' %>>Active</option>
+                                        <option value="expired" <%= filters.status === 'expired' ? 'selected' : '' %>>Expired</option>
+                                        <option value="suspended" <%= filters.status === 'suspended' ? 'selected' : '' %>>Suspended</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="expiry_filter" class="form-label">Expiry</label>
+                                    <select class="form-select" id="expiry_filter" name="expiry_filter">
+                                        <option value="">All</option>
+                                        <option value="expiring_soon" <%= filters.expiry_filter === 'expiring_soon' ? 'selected' : '' %>>Expiring Soon</option>
+                                        <option value="expired" <%= filters.expiry_filter === 'expired' ? 'selected' : '' %>>Already Expired</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="search" class="form-label">Search</label>
+                                    <input type="text" class="form-control" id="search" name="search" 
+                                           placeholder="Search by database name, user..." value="<%= filters.search || '' %>">
+                                </div>
+                                <div class="col-md-2">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fas fa-search me-1"></i>Filter
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Databases Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <% if (databases && databases.length > 0) { %>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>
+                                                <input type="checkbox" id="selectAll" class="form-check-input">
+                                            </th>
+                                            <th>Database</th>
+                                            <th>User</th>
+                                            <th>Status</th>
+                                            <th>Expiry Date</th>
+                                            <th>Created</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% databases.forEach(database => { %>
+                                            <tr>
+                                                <td>
+                                                    <input type="checkbox" class="form-check-input database-checkbox" 
+                                                           value="<%= database.id %>">
+                                                </td>
+                                                <td>
+                                                    <div>
+                                                        <div class="fw-semibold"><%= database.database_name %></div>
+                                                        <small class="text-muted">
+                                                            <i class="fas fa-globe me-1"></i><%= database.domain_name || 'No domain' %>
+                                                        </small>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div>
+                                                        <div class="fw-semibold"><%= database.user_name %></div>
+                                                        <small class="text-muted"><%= database.user_email %></small>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span class="badge <%= database.status === 'active' ? 'bg-success' : 
+                                                                           database.status === 'expired' ? 'bg-danger' : 'bg-secondary' %>">
+                                                        <%= database.status.toUpperCase() %>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div>
+                                                        <div><%= new Date(database.expiry_date).toLocaleDateString() %></div>
+                                                        <% const now = new Date(); %>
+                                                        <% const expiryDate = new Date(database.expiry_date); %>
+                                                        <% const daysLeft = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24)); %>
+                                                        <% if (daysLeft <= 0) { %>
+                                                            <span class="badge bg-danger expiry-badge">EXPIRED</span>
+                                                        <% } else if (daysLeft <= 3) { %>
+                                                            <span class="badge bg-danger expiry-badge"><%= daysLeft %> days left</span>
+                                                        <% } else if (daysLeft <= 7) { %>
+                                                            <span class="badge bg-warning expiry-badge"><%= daysLeft %> days left</span>
+                                                        <% } else { %>
+                                                            <span class="badge bg-success expiry-badge"><%= daysLeft %> days left</span>
+                                                        <% } %>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <small><%= new Date(database.created_at).toLocaleDateString() %></small>
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group" role="group">
+                                                        <button class="btn btn-sm btn-outline-primary db-view-btn" 
+                                                                data-db-id="<%= database.id %>" title="View Details">
+                                                            <i class="fas fa-eye"></i>
+                                                        </button>
+                                                        <% if (database.status !== 'expired') { %>
+                                                            <button class="btn btn-sm btn-outline-success db-renew-btn" 
+                                                                    data-db-id="<%= database.id %>" title="Renew">
+                                                                <i class="fas fa-refresh"></i>
+                                                            </button>
+                                                        <% } %>
+                                                        <button class="btn btn-sm btn-outline-warning db-edit-domain-btn" 
+                                                                data-db-id="<%= database.id %>"
+                                                                data-domain-name="<%= database.domain_name || '' %>"
+                                                                data-bs-toggle="modal" 
+                                                                data-bs-target="#editDomainModel"
+                                                                title="Edit Domain">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-danger db-delete-btn" 
+                                                                data-db-id="<%= database.id %>" title="Delete">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Bulk Actions -->
+                            <div class="row mt-3" id="bulkActions" style="display: none;">
+                                <div class="col-12">
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-success btn-sm" id="bulkRenewBtn">
+                                            <i class="fas fa-refresh me-1"></i>Bulk Renew
+                                        </button>
+                                        <button class="btn btn-danger btn-sm" id="bulkDeleteBtn">
+                                            <i class="fas fa-trash me-1"></i>Bulk Delete
+                                        </button>
+                                        <button class="btn btn-secondary btn-sm" id="clearSelectionBtn">
+                                            <i class="fas fa-times me-1"></i>Clear Selection
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Enhanced Pagination -->
+                            <% if (pagination && pagination.totalPages > 1) { %>
+                                <nav class="mt-4">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-6">
+                                            <p class="text-muted mb-0">
+                                                Showing <%= (pagination.currentPage - 1) * 20 + 1 %> to 
+                                                <%= Math.min(pagination.currentPage * 20, pagination.totalDatabases) %> 
+                                                of <%= pagination.totalDatabases %> databases
+                                            </p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <ul class="pagination justify-content-end mb-0">
+                                                <% if (pagination.currentPage > 1) { %>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?page=1&<%= new URLSearchParams(filters).toString() %>">
+                                                            <i class="fas fa-angle-double-left"></i>
+                                                        </a>
+                                                    </li>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?page=<%= pagination.currentPage - 1 %>&<%= new URLSearchParams(filters).toString() %>">
+                                                            <i class="fas fa-chevron-left"></i>
+                                                        </a>
+                                                    </li>
+                                                <% } %>
+                                                
+                                                <% const startPage = Math.max(1, pagination.currentPage - 2); %>
+                                                <% const endPage = Math.min(pagination.totalPages, pagination.currentPage + 2); %>
+                                                
+                                                <% if (startPage > 1) { %>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?page=1&<%= new URLSearchParams(filters).toString() %>">1</a>
+                                                    </li>
+                                                    <% if (startPage > 2) { %>
+                                                        <li class="page-item disabled">
+                                                            <span class="page-link">...</span>
+                                                        </li>
+                                                    <% } %>
+                                                <% } %>
+                                                
+                                                <% for (let i = startPage; i <= endPage; i++) { %>
+                                                    <li class="page-item <%= i === pagination.currentPage ? 'active' : '' %>">
+                                                        <a class="page-link" href="?page=<%= i %>&<%= new URLSearchParams(filters).toString() %>">
+                                                            <%= i %>
+                                                        </a>
+                                                    </li>
+                                                <% } %>
+                                                
+                                                <% if (endPage < pagination.totalPages) { %>
+                                                    <% if (endPage < pagination.totalPages - 1) { %>
+                                                        <li class="page-item disabled">
+                                                            <span class="page-link">...</span>
+                                                        </li>
+                                                    <% } %>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?page=<%= pagination.totalPages %>&<%= new URLSearchParams(filters).toString() %>">
+                                                            <%= pagination.totalPages %>
+                                                        </a>
+                                                    </li>
+                                                <% } %>
+                                                
+                                                <% if (pagination.currentPage < pagination.totalPages) { %>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?page=<%= pagination.currentPage + 1 %>&<%= new URLSearchParams(filters).toString() %>">
+                                                            <i class="fas fa-chevron-right"></i>
+                                                        </a>
+                                                    </li>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?page=<%= pagination.totalPages %>&<%= new URLSearchParams(filters).toString() %>">
+                                                            <i class="fas fa-angle-double-right"></i>
+                                                        </a>
+                                                    </li>
+                                                <% } %>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </nav>
+                            <% } %>
+                        <% } else { %>
+                            <div class="text-center py-5">
+                                <i class="fas fa-database fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No databases found</h5>
+                                <p class="text-muted">Try adjusting your filters or create new databases.</p>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Doamin -->
+    <div class="modal fade" id="editDomainModel" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Domain</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="/admin/databases/domain/edit" method="POST">
+                    <div class="modal-body">
+                        <input type="hidden" id="edit_database_id" name="database_id" value="">
+                        
+                        <div class="mb-3">
+                            <label for="domain_type" class="form-label">Domain Type *</label>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="domain_type" id="subdomain_option" value="subdomain" checked>
+                                        <label class="form-check-label" for="subdomain_option">
+                                            <i class="fas fa-link me-1"></i>Subdomain
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="domain_type" id="custom_domain_option" value="custom">
+                                        <label class="form-check-label" for="custom_domain_option">
+                                            <i class="fas fa-globe me-1"></i>Custom Domain
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="expected_domain" class="form-label">Expected Domain *</label>
+                            
+                            <!-- Subdomain Input -->
+                            <div class="input-group" id="subdomain_input">
+                                <span class="input-group-text">
+                                    <i class="fas fa-link"></i>
+                                </span>
+                                <input type="text" class="form-control" id="subdomain_name" name="subdomain_name" 
+                                       placeholder="yourname" pattern="[a-zA-Z0-9-]+" required>
+                                <span class="input-group-text">.hospx.com</span>
+                                <button type="button" class="btn btn-outline-secondary" id="checkSubdomain">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Custom Domain Input -->
+                            <div class="input-group" id="custom_domain_input" style="display: none;">
+                                <span class="input-group-text">
+                                    <i class="fas fa-globe"></i>
+                                </span>
+                                <input type="text" class="form-control" id="custom_domain_name" name="custom_domain_name" 
+                                       placeholder="example.com">
+                                <button type="button" class="btn btn-outline-secondary" id="checkCustomDomain">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            
+                            <!-- Hidden field for actual domain value -->
+                            <input type="hidden" id="expected_domain" name="expected_domain">
+                            
+                            <div class="validation-message"></div>
+                            <div class="form-text">
+                                <small id="domain_help_text">
+                                    Choose a subdomain (yourname.hospx.com) or use your own custom domain
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-1"></i>Update Domain
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Database Details Modal -->
+    <div class="modal fade" id="databaseDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Database Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="databaseDetailsContent">
+                    <!-- Content will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // Wait for DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            //Load users when create modal opens
+            $('#editDomainModel').on('show.bs.modal', function (e) {
+                const button = e.relatedTarget; // Button that triggered the modal
+                if (button && button.classList.contains('db-edit-domain-btn')) {
+                    const databaseId = button.getAttribute('data-db-id');
+                    const currentDomain = button.getAttribute('data-domain-name');
+                    
+                    // Set the database ID in the hidden field
+                    document.getElementById('edit_database_id').value = databaseId;
+                    
+                    // Parse current domain to populate the form
+                    if (currentDomain) {
+                        if (currentDomain.endsWith('.hospx.com')) {
+                            // It's a subdomain
+                            const subdomain = currentDomain.replace('.hospx.com', '');
+                            document.getElementById('subdomain_option').checked = true;
+                            document.getElementById('subdomain_name').value = subdomain;
+                            document.getElementById('custom_domain_name').value = '';
+                            // Show subdomain input, hide custom domain input
+                            $('#subdomain_input').show();
+                            $('#custom_domain_input').hide();
+                            $('#subdomain_name').prop('required', true);
+                            $('#custom_domain_name').prop('required', false);
+                        } else {
+                            // It's a custom domain
+                            document.getElementById('custom_domain_option').checked = true;
+                            document.getElementById('custom_domain_name').value = currentDomain;
+                            document.getElementById('subdomain_name').value = '';
+                            // Show custom domain input, hide subdomain input
+                            $('#subdomain_input').hide();
+                            $('#custom_domain_input').show();
+                            $('#subdomain_name').prop('required', false);
+                            $('#custom_domain_name').prop('required', true);
+                        }
+                        updateExpectedDomain();
+                    }
+                } else {
+                    // Reset form for new domain creation (if needed)
+                    document.getElementById('edit_database_id').value = '';
+                    document.getElementById('subdomain_option').checked = true;
+                    document.getElementById('subdomain_name').value = '';
+                    document.getElementById('custom_domain_name').value = '';
+                    $('#subdomain_input').show();
+                    $('#custom_domain_input').hide();
+                    $('#subdomain_name').prop('required', true);
+                    $('#custom_domain_name').prop('required', false);
+                    updateExpectedDomain();
+                }
+                
+                // Load users for database creation (keeping existing functionality)
+                fetch('/admin/databases/users')
+                    .then(response => response.json())
+                    .then(users => {
+                        const userSelect = document.getElementById('user_id');
+                        if (userSelect) {
+                            userSelect.innerHTML = '<option value="">Choose user...</option>';
+                            users.forEach(user => {
+                                userSelect.innerHTML += `<option value="${user.id}">${user.full_name} (${user.email})</option>`;
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error loading users:', error);
+                        const userSelect = document.getElementById('user_id');
+                        if (userSelect) {
+                            userSelect.innerHTML = '<option value="">Error loading users. Please refresh.</option>';
+                        }
+                    });
+            });
+
+            // Checkbox functionality
+            document.getElementById('selectAll').addEventListener('change', function() {
+                const checkboxes = document.querySelectorAll('.database-checkbox');
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = this.checked;
+                });
+                toggleBulkActions();
+            });
+
+            // Individual checkbox change
+            document.addEventListener('change', function(e) {
+                if (e.target.classList.contains('database-checkbox')) {
+                    toggleBulkActions();
+                    updateSelectAllCheckbox();
+                }
+            });
+
+            // Bulk action buttons
+            document.getElementById('bulkRenewBtn').addEventListener('click', bulkRenew);
+            document.getElementById('bulkDeleteBtn').addEventListener('click', bulkDelete);
+            document.getElementById('clearSelectionBtn').addEventListener('click', clearSelection);
+
+            // Database action buttons
+            document.addEventListener('click', function(e) {
+                const target = e.target.closest('button');
+                if (!target) return;
+
+                const dbId = target.getAttribute('data-db-id');
+                
+                if (target.classList.contains('db-view-btn')) {
+                    viewDatabase(dbId);
+                } else if (target.classList.contains('db-renew-btn')) {
+                    renewDatabase(dbId);
+                } else if (target.classList.contains('db-edit-btn')) {
+                    editDatabase(dbId);
+                } else if (target.classList.contains('db-delete-btn')) {
+                    deleteDatabase(dbId);
+                } else if (target.id === 'togglePasswordBtn') {
+                    togglePassword();
+                }
+            });
+        });
+
+        // Global functions that need to be accessible from multiple contexts
+        function updateExpectedDomain() {
+            const domainType = $('input[name="domain_type"]:checked').val();
+            let expectedDomain = '';
+            
+            if (domainType === 'subdomain') {
+                const subdomain = $('#subdomain_name').val();
+                if (subdomain) {
+                    expectedDomain = subdomain + '.hospx.com';
+                }
+            } else {
+                expectedDomain = $('#custom_domain_name').val();
+            }
+            
+            $('#expected_domain').val(expectedDomain);
+        }
+
+        function showValidation(fieldId, isValid, message) {
+            const field = $('#' + fieldId);
+            const messageDiv = field.closest('.mb-3').find('.validation-message');
+            
+            field.removeClass('is-valid is-invalid');
+            field.addClass(isValid ? 'is-valid' : 'is-invalid');
+            
+            messageDiv.removeClass('text-success text-danger');
+            messageDiv.addClass(isValid ? 'text-success' : 'text-danger');
+            messageDiv.text(message);
+        }
+
+        $(document).ready(function() {
+            // Domain type switching
+            $('input[name="domain_type"]').change(function() {
+                const domainType = $(this).val();
+                
+                if (domainType === 'subdomain') {
+                    $('#subdomain_input').show();
+                    $('#custom_domain_input').hide();
+                    $('#subdomain_name').prop('required', true);
+                    $('#custom_domain_name').prop('required', false);
+                    $('#domain_help_text').text('Choose a subdomain (yourname.hospx.com)');
+                    updateExpectedDomain();
+                } else {
+                    $('#subdomain_input').hide();
+                    $('#custom_domain_input').show();
+                    $('#subdomain_name').prop('required', false);
+                    $('#custom_domain_name').prop('required', true);
+                    $('#domain_help_text').text('Enter your own custom domain (example.com)');
+                    updateExpectedDomain();
+                }
+            });
+
+            // Update hidden field when user types
+            $('#subdomain_name, #custom_domain_name').on('input', function() {
+                updateExpectedDomain();
+            });
+
+            // Initialize
+            updateExpectedDomain();
+
+            // Email validation
+            $('#checkEmail').click(function() {
+                const email = $('#email').val();
+                if (!email) {
+                    showValidation('email', false, 'Please enter an email address');
+                    return;
+                }
+
+                $.post('/api/validate-email', { email: email })
+                    .done(function(data) {
+                        if (data.exists) {
+                            showValidation('email', false, 'Email already registered');
+                        } else {
+                            showValidation('email', true, 'Email available');
+                        }
+                    })
+                    .fail(function() {
+                        showValidation('email', false, 'Error checking email');
+                    });
+            });
+
+            // Subdomain validation
+            $('#checkSubdomain').click(function() {
+                const subdomain = $('#subdomain_name').val();
+                if (!subdomain) {
+                    showValidation('subdomain_name', false, 'Please enter a subdomain');
+                    return;
+                }
+
+                // Validate subdomain format
+                const subdomainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/;
+                if (!subdomainRegex.test(subdomain)) {
+                    showValidation('subdomain_name', false, 'Invalid subdomain format. Use only letters, numbers, and hyphens.');
+                    return;
+                }
+
+                if (subdomain.length < 3 || subdomain.length > 20) {
+                    showValidation('subdomain_name', false, 'Subdomain must be between 3-20 characters');
+                    return;
+                }
+
+                $.post('/api/validate-subdomain', { subdomain: subdomain })
+                    .done(function(data) {
+                        if (data.exists) {
+                            showValidation('subdomain_name', false, 'Subdomain already registered');
+                        } else {
+                            showValidation('subdomain_name', true, 'Subdomain available');
+                            updateExpectedDomain();
+                        }
+                    })
+                    .fail(function() {
+                        showValidation('subdomain_name', false, 'Error checking subdomain');
+                    });
+            });
+
+            // Custom domain validation
+            $('#checkCustomDomain').click(function() {
+                const customDomain = $('#custom_domain_name').val();
+                if (!customDomain) {
+                    showValidation('custom_domain_name', false, 'Please enter a custom domain');
+                    return;
+                }
+
+                // Validate domain format
+                const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$/;
+                if (!domainRegex.test(customDomain)) {
+                    showValidation('custom_domain_name', false, 'Invalid domain format');
+                    return;
+                }
+
+                $.post('/api/validate-domain', { domain: customDomain })
+                    .done(function(data) {
+                        if (data.exists) {
+                            showValidation('custom_domain_name', false, 'Domain already registered');
+                        } else {
+                            showValidation('custom_domain_name', true, 'Domain available');
+                            updateExpectedDomain();
+                        }
+                    })
+                    .fail(function() {
+                        showValidation('custom_domain_name', false, 'Error checking domain');
+                    });
+            });
+
+            // Reference code validation
+            $('#validateRef').click(function() {
+                const referenceCode = $('#reference_code').val();
+                if (!referenceCode) {
+                    showValidation('reference_code', false, 'Please enter a reference code');
+                    return;
+                }
+
+                $.post('/api/validate-reference', { reference_code: referenceCode })
+                    .done(function(data) {
+                        if (data.valid) {
+                            showValidation('reference_code', true, 'Valid reference code');
+                            $('#referrer-name').text(data.referrer.name);
+                            $('#referrer-info').show();
+                        } else {
+                            showValidation('reference_code', false, 'Invalid reference code');
+                            $('#referrer-info').hide();
+                        }
+                    })
+                    .fail(function() {
+                        showValidation('reference_code', false, 'Error validating reference code');
+                    });
+            });
+
+            // Form submission
+            $('#registerForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                // Update expected_domain before submission
+                updateExpectedDomain();
+                
+                // Validate required fields
+                const domainType = $('input[name="domain_type"]:checked').val();
+                const expectedDomain = $('#expected_domain').val();
+                
+                if (!expectedDomain) {
+                    if (domainType === 'subdomain') {
+                        showValidation('subdomain_name', false, 'Please enter a subdomain');
+                    } else {
+                        showValidation('custom_domain_name', false, 'Please enter a custom domain');
+                    }
+                    return;
+                }
+                
+                $('#submitBtn').hide();
+                $('.loading').show();
+                
+                this.submit();
+            });
+        });
+
+        function toggleBulkActions() {
+            const checkedBoxes = document.querySelectorAll('.database-checkbox:checked');
+            const bulkActions = document.getElementById('bulkActions');
+            if (checkedBoxes.length > 0) {
+                bulkActions.style.display = 'block';
+            } else {
+                bulkActions.style.display = 'none';
+            }
+        }
+
+        function updateSelectAllCheckbox() {
+            const checkboxes = document.querySelectorAll('.database-checkbox');
+            const checkedBoxes = document.querySelectorAll('.database-checkbox:checked');
+            const selectAllCheckbox = document.getElementById('selectAll');
+            
+            if (checkedBoxes.length === 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
+            } else if (checkedBoxes.length === checkboxes.length) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+            }
+        }
+
+        function clearSelection() {
+            document.querySelectorAll('.database-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            document.getElementById('selectAll').checked = false;
+            document.getElementById('selectAll').indeterminate = false;
+            toggleBulkActions();
+        }
+
+        function getSelectedDatabases() {
+            const checkedBoxes = document.querySelectorAll('.database-checkbox:checked');
+            return Array.from(checkedBoxes).map(checkbox => checkbox.value);
+        }
+
+        function bulkRenew() {
+            const selectedIds = getSelectedDatabases();
+            if (selectedIds.length === 0) {
+                alert('Please select databases to renew');
+                return;
+            }
+
+            if (confirm(`Renew ${selectedIds.length} selected databases for 15 days?`)) {
+                // Disable bulk buttons during operation
+                document.getElementById('bulkRenewBtn').disabled = true;
+                document.getElementById('bulkDeleteBtn').disabled = true;
+                document.getElementById('bulkRenewBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Renewing...';
+                
+                Promise.all(selectedIds.map(id => 
+                    fetch(`/admin/databases/${id}/renew`, { 
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                    .then(async response => {
+                        if (!response.ok) {
+                            try {
+                                const errorData = await response.json();
+                                return { success: false, message: errorData.message || `Server error (${response.status})`, id: id };
+                            } catch (parseError) {
+                                return { success: false, message: `Server error (${response.status}): ${response.statusText}`, id: id };
+                            }
+                        }
+                        const result = await response.json();
+                        return { ...result, id: id };
+                    })
+                    .catch(error => {
+                        return { success: false, message: error.message, id: id };
+                    })
+                )).then(results => {
+                    const successful = results.filter(r => r.success).length;
+                    const failed = results.filter(r => !r.success);
+                    
+                    let message = `Successfully renewed ${successful} out of ${selectedIds.length} databases`;
+                    if (failed.length > 0) {
+                        message += `\n\nFailed renewals:`;
+                        failed.forEach((result, index) => {
+                            message += `\n- Database ${index + 1}: ${result.message || result.error || 'Unknown error'}`;
+                        });
+                    }
+                    alert(message);
+                    location.reload();
+                }).catch(error => {
+                    alert('Error during bulk renewal: ' + error.message);
+                    console.error('Bulk renewal error:', error);
+                }).finally(() => {
+                    // Re-enable buttons
+                    document.getElementById('bulkRenewBtn').disabled = false;
+                    document.getElementById('bulkDeleteBtn').disabled = false;
+                    document.getElementById('bulkRenewBtn').innerHTML = '<i class="fas fa-refresh me-1"></i>Bulk Renew';
+                });
+            }
+        }
+
+        function bulkDelete() {
+            const selectedIds = getSelectedDatabases();
+            if (selectedIds.length === 0) {
+                alert('Please select databases to delete');
+                return;
+            }
+
+            if (confirm(`Are you sure you want to delete ${selectedIds.length} selected databases? This action will also delete associated domains from Webuzo panel and cannot be undone.`)) {
+                // Disable bulk buttons during operation
+                document.getElementById('bulkRenewBtn').disabled = true;
+                document.getElementById('bulkDeleteBtn').disabled = true;
+                document.getElementById('bulkDeleteBtn').innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Deleting...';
+                
+                Promise.all(selectedIds.map(id => 
+                    fetch(`/admin/databases/${id}/delete`, { 
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: '_method=DELETE'
+                    })
+                    .then(response => response.json())
+                )).then(results => {
+                    const successful = results.filter(r => r.success).length;
+                    const failed = results.filter(r => !r.success);
+                    
+                    let message = `Successfully deleted ${successful} out of ${selectedIds.length} databases`;
+                    
+                    // Show warnings from successful deletions
+                    const warnings = results.filter(r => r.success && r.warnings && r.warnings.length > 0);
+                    if (warnings.length > 0) {
+                        message += `\n\nWarnings:`;
+                        warnings.forEach((result, index) => {
+                            message += `\n- ${result.warnings.join('; ')}`;
+                        });
+                    }
+                    
+                    // Show failed deletions
+                    if (failed.length > 0) {
+                        message += `\n\nFailed deletions:`;
+                        failed.forEach((result, index) => {
+                            message += `\n- Database ${index + 1}: ${result.message || result.error || 'Unknown error'}`;
+                        });
+                    }
+                    
+                    alert(message);
+                    location.reload();
+                }).catch(error => {
+                    alert('Error during bulk deletion: ' + error.message);
+                    console.error('Bulk deletion error:', error);
+                }).finally(() => {
+                    // Re-enable buttons
+                    document.getElementById('bulkRenewBtn').disabled = false;
+                    document.getElementById('bulkDeleteBtn').disabled = false;
+                    document.getElementById('bulkDeleteBtn').innerHTML = '<i class="fas fa-trash me-1"></i>Bulk Delete';
+                });
+            }
+        }
+
+        function viewDatabase(databaseId) {
+            fetch(`/admin/databases/${databaseId}/details`)
+                .then(response => response.json())
+                .then(database => {
+                    const content = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Database Information</h6>
+                                <p><strong>Name:</strong> ${database.database_name}</p>
+                                <p><strong>Domain:</strong> ${database.domain_name}</p>
+                                <p><strong>Status:</strong> <span class="badge bg-${database.status === 'active' ? 'success' : 'danger'}">${database.status.toUpperCase()}</span></p>
+                                <p><strong>Created:</strong> ${new Date(database.created_at).toLocaleString()}</p>
+                                <p><strong>Expiry:</strong> ${new Date(database.expiry_date).toLocaleString()}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>User Information</h6>
+                                <p><strong>Name:</strong> ${database.user_name}</p>
+                                <p><strong>Email:</strong> ${database.user_email}</p>
+                                <p><strong>Phone:</strong> ${database.user_phone || 'N/A'}</p>
+                            </div>
+                        </div>
+                        
+                    `;
+                    document.getElementById('databaseDetailsContent').innerHTML = content;
+                    new bootstrap.Modal(document.getElementById('databaseDetailsModal')).show();
+                })
+                .catch(error => {
+                    alert('Error loading database details');
+                    console.error('Error:', error);
+                });
+        }
+
+        function togglePassword() {
+            const hiddenSpan = document.getElementById('password-hidden');
+            const visibleSpan = document.getElementById('password-visible');
+            const icon = document.getElementById('password-icon');
+            
+            if (hiddenSpan.style.display === 'none') {
+                hiddenSpan.style.display = 'inline';
+                visibleSpan.style.display = 'none';
+                icon.className = 'fas fa-eye';
+            } else {
+                hiddenSpan.style.display = 'none';
+                visibleSpan.style.display = 'inline';
+                icon.className = 'fas fa-eye-slash';
+            }
+        }
+
+        function renewDatabase(databaseId) {
+            if (confirm('Renew this database for another 15 days?')) {
+                // Show loading state
+                const renewBtn = document.querySelector(`button[data-db-id="${databaseId}"].db-renew-btn`);
+                if (renewBtn) {
+                    renewBtn.disabled = true;
+                    renewBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                }
+
+                fetch(`/admin/databases/${databaseId}/renew`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(async response => {
+                    // Check if response is ok (status 200-299)
+                    if (!response.ok) {
+                        // Try to parse error message from response
+                        try {
+                            const errorData = await response.json();
+                            throw new Error(errorData.message || `Server error (${response.status})`);
+                        } catch (parseError) {
+                            // If JSON parsing fails, use status text
+                            throw new Error(`Server error (${response.status}): ${response.statusText}`);
+                        }
+                    }
+                    return response.json();
+                })
+                .then(result => {
+                    if (result.success) {
+                        // Show success message with more details
+                        let message = result.message || 'Database renewed successfully';
+                        if (result.newExpiryDate) {
+                            message += ` (New expiry: ${new Date(result.newExpiryDate).toLocaleDateString()})`;
+                        }
+                        alert(message);
+                        location.reload();
+                    } else {
+                        alert('Error renewing database: ' + (result.message || result.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Renewal error:', error);
+                    alert('Error renewing database: ' + error.message);
+                })
+                .finally(() => {
+                    // Reset button state
+                    if (renewBtn) {
+                        renewBtn.disabled = false;
+                        renewBtn.innerHTML = '<i class="fas fa-refresh"></i>';
+                    }
+                });
+            }
+        }
+
+        function editDatabase(databaseId) {
+            // add a
+        }
+
+        function deleteDatabase(databaseId) {
+            if (confirm('Are you sure you want to delete this database? This action will also delete the associated domain from Webuzo panel and cannot be undone.')) {
+                // Show loading state
+                const deleteBtn = document.querySelector(`button[data-db-id="${databaseId}"].db-delete-btn`);
+                if (deleteBtn) {
+                    deleteBtn.disabled = true;
+                    deleteBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                }
+
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = `/admin/databases/${databaseId}/delete`;
+                
+                const methodInput = document.createElement('input');
+                methodInput.type = 'hidden';
+                methodInput.name = '_method';
+                methodInput.value = 'DELETE';
+                form.appendChild(methodInput);
+                
+                // Set up to handle JSON response for better feedback
+                fetch(`/admin/databases/${databaseId}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: '_method=DELETE'
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        let message = result.message || 'Database deleted successfully';
+                        if (result.deletedItems) {
+                            message += `\n\nDeleted items:`;
+                            if (result.deletedItems.database) {
+                                message += `\n- Database: ${result.deletedItems.database}`;
+                            }
+                            if (result.deletedItems.domain) {
+                                message += `\n- Domain: ${result.deletedItems.domain} (${result.deletedItems.domainType})`;
+                            }
+                        }
+                        if (result.warnings && result.warnings.length > 0) {
+                            message += `\n\nWarnings:\n- ${result.warnings.join('\n- ')}`;
+                        }
+                        alert(message);
+                        location.reload();
+                    } else {
+                        alert('Error deleting database: ' + (result.message || result.error || 'Unknown error'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Deletion error:', error);
+                    alert('Network error while deleting database. Please try again.');
+                })
+                .finally(() => {
+                    // Reset button state
+                    if (deleteBtn) {
+                        deleteBtn.disabled = false;
+                        deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                    }
+                });
+            }
+        }
+
+        // Auto-refresh every 30 seconds for real-time updates
+        setInterval(() => {
+            if (!document.querySelector('.modal.show')) {
+                location.reload();
+            }
+        }, 30000);
+    </script>
+</body>
+</html> 

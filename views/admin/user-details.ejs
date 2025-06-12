@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Webuzo SaaS</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .navbar-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card {
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .user-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 2rem;
+        }
+        .info-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px;
+            padding: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom">
+        <div class="container">
+            <a class="navbar-brand" href="/admin/dashboard">
+                <i class="fas fa-server me-2"></i>Hospx
+            </a>
+            
+            <div class="navbar-nav me-auto">
+                <a class="nav-link" href="/admin/dashboard">
+                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                </a>
+                <a class="nav-link active" href="/admin/users">
+                    <i class="fas fa-users me-1"></i>Users
+                </a>
+                <a class="nav-link" href="/admin/databases">
+                    <i class="fas fa-database me-1"></i>Databases
+                </a>
+                <a class="nav-link" href="/admin/payments">
+                    <i class="fas fa-credit-card me-1"></i>Payments
+                </a>
+                <a class="nav-link" href="/admin/commissions">
+                    <i class="fas fa-percentage me-1"></i>Commissions
+                </a>
+                <a class="nav-link" href="/admin/reports">
+                    <i class="fas fa-chart-bar me-1"></i>Reports
+                </a>
+            </div>
+            
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user me-1"></i><%= user.full_name %>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/change-password">
+                            <i class="fas fa-key me-2"></i>Change Password
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form action="/logout" method="POST" class="d-inline">
+                                <button type="submit" class="dropdown-item">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <% if (typeof success_msg !== 'undefined' && success_msg.length > 0) { %>
+        <div class="alert alert-success alert-dismissible fade show m-3" role="alert">
+            <%= success_msg %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <% } %>
+
+    <% if (typeof error_msg !== 'undefined' && error_msg.length > 0) { %>
+        <div class="alert alert-danger alert-dismissible fade show m-3" role="alert">
+            <%= error_msg %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <% } %>
+
+    <div class="container mt-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2><i class="fas fa-user me-2"></i>User Details</h2>
+                        <p class="text-muted">Detailed information about <%= user.full_name %></p>
+                    </div>
+                    <a href="/admin/users" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Users
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Information -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div class="user-avatar mx-auto mb-3">
+                            <%= user.full_name.charAt(0).toUpperCase() %>
+                        </div>
+                        <h5 class="card-title"><%= user.full_name %></h5>
+                        <p class="card-text text-muted"><%= user.email %></p>
+                        <span class="badge <%= user.role === 'superadmin' ? 'bg-danger' : 
+                                             user.role === 'admin' ? 'bg-warning' : 
+                                             user.role === 'executive' ? 'bg-info' : 'bg-secondary' %> mb-2">
+                            <%= user.role.toUpperCase() %>
+                        </span>
+                        <br>
+                        <span class="badge <%= user.status === 'active' ? 'bg-success' : 
+                                             user.status === 'inactive' ? 'bg-secondary' : 'bg-danger' %>">
+                            <%= user.status.toUpperCase() %>
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0"><i class="fas fa-info-circle me-2"></i>Basic Information</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Full Name:</strong> <%= user.full_name %></p>
+                                <p><strong>Email:</strong> <%= user.email %></p>
+                                <p><strong>Phone:</strong> <%= user.phone %></p>
+                                <p><strong>Role:</strong> <%= user.role %></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Status:</strong> <%= user.status %></p>
+                                <p><strong>Reference Code:</strong> <%= user.reference_code || 'N/A' %></p>
+                                <p><strong>Commission:</strong> <%= user.commission_percentage || 0 %>% + <%= user.commission_fixed || 0 %> BDT</p>
+                                <p><strong>Joined:</strong> <%= new Date(user.created_at).toLocaleDateString() %></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-xl-3 col-md-6">
+                <div class="card">
+                    <div class="card-body info-card">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-primary"><%= databases ? databases.length : 0 %></h4>
+                                <p class="mb-0">Total Databases</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-database fa-2x text-primary"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6">
+                <div class="card">
+                    <div class="card-body info-card">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-success"><%= payments ? payments.length : 0 %></h4>
+                                <p class="mb-0">Total Payments</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-credit-card fa-2x text-success"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6">
+                <div class="card">
+                    <div class="card-body info-card">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-warning"><%= commissions ? commissions.length : 0 %></h4>
+                                <p class="mb-0">Commissions</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-percentage fa-2x text-warning"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6">
+                <div class="card">
+                    <div class="card-body info-card">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-info">
+                                    <%= payments ? payments.filter(p => p.status === 'completed').reduce((sum, p) => sum + parseFloat(p.amount), 0).toFixed(2) : '0.00' %> BDT
+                                </h4>
+                                <p class="mb-0">Total Spent</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-money-bill-wave fa-2x text-info"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Databases Table -->
+        <% if (databases && databases.length > 0) { %>
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0"><i class="fas fa-database me-2"></i>User Databases</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Database Name</th>
+                                            <th>Domain</th>
+                                            <th>Status</th>
+                                            <th>Expiry Date</th>
+                                            <th>Created</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% databases.forEach(database => { %>
+                                            <tr>
+                                                <td><%= database.database_name %></td>
+                                                <td><%= database.domain_name || 'N/A' %></td>
+                                                <td>
+                                                    <span class="badge <%= database.status === 'active' ? 'bg-success' : 'bg-danger' %>">
+                                                        <%= database.status.toUpperCase() %>
+                                                    </span>
+                                                </td>
+                                                <td><%= new Date(database.expiry_date).toLocaleDateString() %></td>
+                                                <td><%= new Date(database.created_at).toLocaleDateString() %></td>
+                                            </tr>
+                                        <% }); %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <% } %>
+
+        <!-- Payments Table -->
+        <% if (payments && payments.length > 0) { %>
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0"><i class="fas fa-credit-card me-2"></i>User Payments</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Transaction ID</th>
+                                            <th>Amount</th>
+                                            <th>Method</th>
+                                            <th>Status</th>
+                                            <th>Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% payments.forEach(payment => { %>
+                                            <tr>
+                                                <td><%= payment.transaction_id %></td>
+                                                <td><%= payment.amount %> <%= payment.currency %></td>
+                                                <td>
+                                                    <span class="badge <%= payment.payment_method === 'bkash' ? 'bg-danger' : 
+                                                                           payment.payment_method === 'nagad' ? 'bg-warning' : 'bg-info' %>">
+                                                        <%= payment.payment_method.toUpperCase() %>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge <%= payment.status === 'completed' ? 'bg-success' : 
+                                                                           payment.status === 'pending' ? 'bg-warning' : 'bg-danger' %>">
+                                                        <%= payment.status.toUpperCase() %>
+                                                    </span>
+                                                </td>
+                                                <td><%= new Date(payment.created_at).toLocaleDateString() %></td>
+                                            </tr>
+                                        <% }); %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <% } %>
+
+        <!-- Commissions Table -->
+        <% if (commissions && commissions.length > 0) { %>
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="card-title mb-0"><i class="fas fa-percentage me-2"></i>User Commissions</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Commission ID</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                            <th>Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% commissions.forEach(commission => { %>
+                                            <tr>
+                                                <td><%= commission.id %></td>
+                                                <td><%= commission.amount %> BDT</td>
+                                                <td>
+                                                    <span class="badge <%= commission.status === 'paid' ? 'bg-success' : 'bg-warning' %>">
+                                                        <%= commission.status.toUpperCase() %>
+                                                    </span>
+                                                </td>
+                                                <td><%= new Date(commission.created_at).toLocaleDateString() %></td>
+                                            </tr>
+                                        <% }); %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <% } %>
+
+        <!-- No Data Messages -->
+        <% if ((!databases || databases.length === 0) && (!payments || payments.length === 0) && (!commissions || commissions.length === 0)) { %>
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body text-center py-5">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No Activity Found</h5>
+                            <p class="text-muted">This user hasn't created any databases, made any payments, or earned any commissions yet.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <% } %>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

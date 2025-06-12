@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 100px 0;
+        }
+        .feature-card {
+            transition: transform 0.3s ease;
+            border: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+        .pricing-card {
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+        .pricing-card:hover {
+            border-color: #007bff;
+            transform: translateY(-5px);
+        }
+        .btn-custom {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            border: none;
+            padding: 12px 30px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-server me-2"></i>Webuzo SaaS
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#features">Features</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#pricing">Pricing</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/login">Login</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-primary text-white ms-2" href="/register">Get Started</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container text-center">
+            <h1 class="display-4 fw-bold mb-4">Professional Domain & Database Management</h1>
+            <p class="lead mb-5">Get your website online with our powerful Webuzo integration platform. Easy setup, reliable hosting, and expert support.</p>
+            <a href="/register" class="btn btn-light btn-lg me-3">
+                <i class="fas fa-rocket me-2"></i>Start Free Trial
+            </a>
+            <a href="#pricing" class="btn btn-outline-light btn-lg">
+                <i class="fas fa-info-circle me-2"></i>Learn More
+            </a>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-5 bg-light">
+        <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col-lg-8 mx-auto">
+                    <h2 class="display-5 fw-bold">Why Choose Our Platform?</h2>
+                    <p class="lead text-muted">Everything you need to get your website online and running smoothly</p>
+                </div>
+            </div>
+            <div class="row g-4">
+                <div class="col-lg-4 col-md-6">
+                    <div class="card feature-card h-100 p-4">
+                        <div class="text-center mb-3">
+                            <i class="fas fa-globe fa-3x text-primary"></i>
+                        </div>
+                        <h5 class="card-title text-center">Domain Management</h5>
+                        <p class="card-text text-muted">Automatic domain setup with Webuzo API integration. Get your domain live in minutes.</p>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="card feature-card h-100 p-4">
+                        <div class="text-center mb-3">
+                            <i class="fas fa-database fa-3x text-success"></i>
+                        </div>
+                        <h5 class="card-title text-center">Database Creation</h5>
+                        <p class="card-text text-muted">Automatic MySQL database creation with 15-day trial period and easy renewal options.</p>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="card feature-card h-100 p-4">
+                        <div class="text-center mb-3">
+                            <i class="fas fa-users fa-3x text-warning"></i>
+                        </div>
+                        <h5 class="card-title text-center">Referral System</h5>
+                        <p class="card-text text-muted">Earn commissions by referring friends. Percentage and fixed amount rewards available.</p>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="card feature-card h-100 p-4">
+                        <div class="text-center mb-3">
+                            <i class="fas fa-credit-card fa-3x text-info"></i>
+                        </div>
+                        <h5 class="card-title text-center">Easy Payments</h5>
+                        <p class="card-text text-muted">Multiple payment options including bKash, Nagad, and bank transfers.</p>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="card feature-card h-100 p-4">
+                        <div class="text-center mb-3">
+                            <i class="fas fa-chart-line fa-3x text-danger"></i>
+                        </div>
+                        <h5 class="card-title text-center">Analytics Dashboard</h5>
+                        <p class="card-text text-muted">Track your databases, payments, and earnings with detailed reports and analytics.</p>
+                    </div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="card feature-card h-100 p-4">
+                        <div class="text-center mb-3">
+                            <i class="fas fa-headset fa-3x text-secondary"></i>
+                        </div>
+                        <h5 class="card-title text-center">24/7 Support</h5>
+                        <p class="card-text text-muted">Expert technical support available round the clock to help you succeed.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="py-5">
+        <div class="container">
+            <div class="row text-center mb-5">
+                <div class="col-lg-8 mx-auto">
+                    <h2 class="display-5 fw-bold">Simple, Transparent Pricing</h2>
+                    <p class="lead text-muted">Get started with our affordable monthly subscription</p>
+                </div>
+            </div>
+            <div class="row justify-content-center">
+                <div class="col-lg-6 col-md-8">
+                    <div class="card pricing-card h-100 p-4">
+                        <div class="card-body text-center">
+                            <h3 class="card-title">Monthly Subscription</h3>
+                            <div class="mb-4">
+                                <span class="display-4 fw-bold text-primary"><%= subscriptionPrice %></span>
+                                <span class="fs-5 text-muted">/<%= currency %></span>
+                            </div>
+                            <ul class="list-unstyled mb-4">
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Custom Domain Setup</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>MySQL Database (15-day trial)</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Email Notifications</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Basic Support</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Referral Commissions</li>
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Payment Flexibility</li>
+                            </ul>
+                            <a href="/register" class="btn btn-custom btn-lg text-white w-100">
+                                <i class="fas fa-rocket me-2"></i>Get Started Now
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Call to Action -->
+    <section class="py-5 bg-primary text-white">
+        <div class="container text-center">
+            <h2 class="mb-4">Ready to Get Started?</h2>
+            <p class="lead mb-4">Join thousands of satisfied customers who trust our platform for their web hosting needs.</p>
+            <a href="/register" class="btn btn-light btn-lg me-3">
+                <i class="fas fa-user-plus me-2"></i>Create Account
+            </a>
+            <a href="/login" class="btn btn-outline-light btn-lg">
+                <i class="fas fa-sign-in-alt me-2"></i>Login
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Webuzo SaaS Platform</h5>
+                    <p class="text-muted">Professional domain and database management solution.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="text-muted">&copy; 2024 Webuzo SaaS. All rights reserved.</p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 

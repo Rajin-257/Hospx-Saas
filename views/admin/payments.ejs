@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Webuzo SaaS</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .navbar-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card {
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .table th {
+            background-color: #f8f9fa;
+            border-top: none;
+        }
+        .payment-stats {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        .amount-cell {
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom">
+        <div class="container">
+            <a class="navbar-brand" href="/admin/dashboard">
+                <i class="fas fa-server me-2"></i>Hospx
+            </a>
+            
+            <div class="navbar-nav me-auto">
+                <a class="nav-link" href="/admin/dashboard">
+                    <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                </a>
+                <a class="nav-link" href="/admin/users">
+                    <i class="fas fa-users me-1"></i>Users
+                </a>
+                <a class="nav-link" href="/admin/databases">
+                    <i class="fas fa-database me-1"></i>Databases
+                </a>
+                <a class="nav-link active" href="/admin/payments">
+                    <i class="fas fa-credit-card me-1"></i>Payments
+                </a>
+                <a class="nav-link" href="/admin/commissions">
+                    <i class="fas fa-percentage me-1"></i>Commissions
+                </a>
+                <a class="nav-link" href="/admin/reports">
+                    <i class="fas fa-chart-bar me-1"></i>Reports
+                </a>
+            </div>
+            
+            <div class="navbar-nav ms-auto">
+                <div class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user me-1"></i><%= user.full_name %>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="/change-password">
+                            <i class="fas fa-key me-2"></i>Change Password
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form action="/logout" method="POST" class="d-inline">
+                                <button type="submit" class="dropdown-item">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <% if (typeof success_msg !== 'undefined' && success_msg.length > 0) { %>
+        <div class="alert alert-success alert-dismissible fade show m-3" role="alert">
+            <%= success_msg %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <% } %>
+
+    <% if (typeof error_msg !== 'undefined' && error_msg.length > 0) { %>
+        <div class="alert alert-danger alert-dismissible fade show m-3" role="alert">
+            <%= error_msg %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <% } %>
+
+    <div class="container mt-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2><i class="fas fa-credit-card me-2"></i>Payment Management</h2>
+                        <p class="text-muted">Manage all payments and transactions</p>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-primary" id="exportPaymentsBtn">
+                            <i class="fas fa-download me-2"></i>Export CSV
+                        </button>
+                        <button class="btn btn-success" id="approveAllPendingBtn">
+                            <i class="fas fa-check me-2"></i>Approve Pending
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-xl-3 col-md-6">
+                <div class="card">
+                    <div class="card-body payment-stats">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-primary"><%= stats.total_payments %></h4>
+                                <p class="mb-0">Total Payments</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-credit-card fa-2x text-primary"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6">
+                <div class="card">
+                    <div class="card-body payment-stats">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-success"><%= (stats.total_revenue || 0).toLocaleString() %> BDT</h4>
+                                <p class="mb-0">Total Revenue</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-money-bill-wave fa-2x text-success"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6">
+                <div class="card">
+                    <div class="card-body payment-stats">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-warning"><%= stats.pending_payments %></h4>
+                                <p class="mb-0">Pending Payments</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-clock fa-2x text-warning"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-xl-3 col-md-6">
+                <div class="card">
+                    <div class="card-body payment-stats">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-info"><%= (stats.monthly_revenue || 0).toLocaleString() %> BDT</h4>
+                                <p class="mb-0">This Month</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-chart-line fa-2x text-info"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <form method="GET" action="/admin/payments">
+                            <div class="row g-3 align-items-end">
+                                <div class="col-md-2">
+                                    <label for="status" class="form-label">Status</label>
+                                    <select class="form-select" id="status" name="status">
+                                        <option value="">All Status</option>
+                                        <option value="pending" <%= filters.status === 'pending' ? 'selected' : '' %>>Pending</option>
+                                        <option value="completed" <%= filters.status === 'completed' ? 'selected' : '' %>>Completed</option>
+                                        <option value="failed" <%= filters.status === 'failed' ? 'selected' : '' %>>Failed</option>
+                                        <option value="cancelled" <%= filters.status === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="payment_method" class="form-label">Method</label>
+                                    <select class="form-select" id="payment_method" name="payment_method">
+                                        <option value="">All Methods</option>
+                                        <option value="bkash" <%= filters.payment_method === 'bkash' ? 'selected' : '' %>>bKash</option>
+                                        <option value="nagad" <%= filters.payment_method === 'nagad' ? 'selected' : '' %>>Nagad</option>
+                                        <option value="bank" <%= filters.payment_method === 'bank' ? 'selected' : '' %>>Bank</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="date_from" class="form-label">Date From</label>
+                                    <input type="date" class="form-control" id="date_from" name="date_from" 
+                                           value="<%= filters.date_from || '' %>">
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="date_to" class="form-label">Date To</label>
+                                    <input type="date" class="form-control" id="date_to" name="date_to" 
+                                           value="<%= filters.date_to || '' %>">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="search" class="form-label">Search</label>
+                                    <input type="text" class="form-control" id="search" name="search" 
+                                           placeholder="Search by user, transaction ID..." value="<%= filters.search || '' %>">
+                                </div>
+                                <div class="col-md-1">
+                                    <button type="submit" class="btn btn-primary w-100">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payments Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <% if (payments && payments.length > 0) { %>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>
+                                                <input type="checkbox" id="selectAll" class="form-check-input">
+                                            </th>
+                                            <th>Transaction ID</th>
+                                            <th>User</th>
+                                            <th>Amount</th>
+                                            <th>Method</th>
+                                            <th>Status</th>
+                                            <th>Type</th>
+                                            <th>Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% payments.forEach(payment => { %>
+                                            <tr>
+                                                <td>
+                                                    <input type="checkbox" class="form-check-input payment-checkbox" 
+                                                           value="<%= payment.id %>">
+                                                </td>
+                                                <td>
+                                                    <div class="fw-semibold"><%= payment.transaction_id %></div>
+                                                    <% if (payment.external_transaction_id) { %>
+                                                        <small class="text-muted">Ext: <%= payment.external_transaction_id %></small>
+                                                    <% } %>
+                                                </td>
+                                                <td>
+                                                    <div>
+                                                        <div class="fw-semibold"><%= payment.user_name %></div>
+                                                        <small class="text-muted"><%= payment.user_email %></small>
+                                                    </div>
+                                                </td>
+                                                <td class="amount-cell">
+                                                    <span class="fw-bold"><%= payment.amount %> <%= payment.currency %></span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge <%= payment.payment_method === 'bkash' ? 'bg-danger' : 
+                                                                           payment.payment_method === 'nagad' ? 'bg-warning' : 'bg-info' %>">
+                                                        <%= payment.payment_method.toUpperCase() %>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge <%= payment.status === 'completed' ? 'bg-success' : 
+                                                                           payment.status === 'pending' ? 'bg-warning' : 
+                                                                           payment.status === 'failed' ? 'bg-danger' : 'bg-secondary' %>">
+                                                        <%= payment.status.toUpperCase() %>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-info">
+                                                        <%= payment.payment_type ? payment.payment_type.toUpperCase() : 'SUBSCRIPTION' %>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <small><%= new Date(payment.created_at).toLocaleString() %></small>
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group" role="group">
+                                                        <button class="btn btn-sm btn-outline-primary payment-view-btn" 
+                                                                data-payment-id="<%= payment.id %>" title="View Details">
+                                                            <i class="fas fa-eye"></i>
+                                                        </button>
+                                                        <% if (payment.status === 'pending') { %>
+                                                            <button class="btn btn-sm btn-outline-success payment-approve-btn" 
+                                                                    data-payment-id="<%= payment.id %>" title="Approve">
+                                                                <i class="fas fa-check"></i>
+                                                            </button>
+                                                            <button class="btn btn-sm btn-outline-danger payment-reject-btn" 
+                                                                    data-payment-id="<%= payment.id %>" title="Reject">
+                                                                <i class="fas fa-times"></i>
+                                                            </button>
+                                                        <% } %>
+                                                        <button class="btn btn-sm btn-outline-info payment-receipt-btn" 
+                                                                data-payment-id="<%= payment.id %>" title="Receipt">
+                                                            <i class="fas fa-receipt"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Bulk Actions -->
+                            <div class="row mt-3" id="bulkActions" style="display: none;">
+                                <div class="col-12">
+                                    <div class="d-flex gap-2">
+                                        <button class="btn btn-success btn-sm" id="bulkApproveBtn">
+                                            <i class="fas fa-check me-1"></i>Bulk Approve
+                                        </button>
+                                        <button class="btn btn-danger btn-sm" id="bulkRejectBtn">
+                                            <i class="fas fa-times me-1"></i>Bulk Reject
+                                        </button>
+                                        <button class="btn btn-info btn-sm" id="bulkDownloadBtn">
+                                            <i class="fas fa-download me-1"></i>Download Receipts
+                                        </button>
+                                        <button class="btn btn-secondary btn-sm" id="clearSelectionBtn">
+                                            <i class="fas fa-times me-1"></i>Clear Selection
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Enhanced Pagination -->
+                            <% if (pagination && pagination.totalPages > 1) { %>
+                                <nav class="mt-4">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-6">
+                                            <p class="text-muted mb-0">
+                                                Showing <%= (pagination.currentPage - 1) * 20 + 1 %> to 
+                                                <%= Math.min(pagination.currentPage * 20, pagination.totalPayments) %> 
+                                                of <%= pagination.totalPayments %> payments
+                                            </p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <ul class="pagination justify-content-end mb-0">
+                                                <% if (pagination.currentPage > 1) { %>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?page=1&<%= new URLSearchParams(filters).toString() %>">
+                                                            <i class="fas fa-angle-double-left"></i>
+                                                        </a>
+                                                    </li>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?page=<%= pagination.currentPage - 1 %>&<%= new URLSearchParams(filters).toString() %>">
+                                                            <i class="fas fa-chevron-left"></i>
+                                                        </a>
+                                                    </li>
+                                                <% } %>
+                                                
+                                                <% const startPage = Math.max(1, pagination.currentPage - 2); %>
+                                                <% const endPage = Math.min(pagination.totalPages, pagination.currentPage + 2); %>
+                                                
+                                                <% if (startPage > 1) { %>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?page=1&<%= new URLSearchParams(filters).toString() %>">1</a>
+                                                    </li>
+                                                    <% if (startPage > 2) { %>
+                                                        <li class="page-item disabled">
+                                                            <span class="page-link">...</span>
+                                                        </li>
+                                                    <% } %>
+                                                <% } %>
+                                                
+                                                <% for (let i = startPage; i <= endPage; i++) { %>
+                                                    <li class="page-item <%= i === pagination.currentPage ? 'active' : '' %>">
+                                                        <a class="page-link" href="?page=<%= i %>&<%= new URLSearchParams(filters).toString() %>">
+                                                            <%= i %>
+                                                        </a>
+                                                    </li>
+                                                <% } %>
+                                                
+                                                <% if (endPage < pagination.totalPages) { %>
+                                                    <% if (endPage < pagination.totalPages - 1) { %>
+                                                        <li class="page-item disabled">
+                                                            <span class="page-link">...</span>
+                                                        </li>
+                                                    <% } %>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?page=<%= pagination.totalPages %>&<%= new URLSearchParams(filters).toString() %>">
+                                                            <%= pagination.totalPages %>
+                                                        </a>
+                                                    </li>
+                                                <% } %>
+                                                
+                                                <% if (pagination.currentPage < pagination.totalPages) { %>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?page=<%= pagination.currentPage + 1 %>&<%= new URLSearchParams(filters).toString() %>">
+                                                            <i class="fas fa-chevron-right"></i>
+                                                        </a>
+                                                    </li>
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="?page=<%= pagination.totalPages %>&<%= new URLSearchParams(filters).toString() %>">
+                                                            <i class="fas fa-angle-double-right"></i>
+                                                        </a>
+                                                    </li>
+                                                <% } %>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </nav>
+                            <% } %>
+                        <% } else { %>
+                            <div class="text-center py-5">
+                                <i class="fas fa-credit-card fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No payments found</h5>
+                                <p class="text-muted">Try adjusting your filters or check back later.</p>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Details Modal -->
+    <div class="modal fade" id="paymentDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Payment Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="paymentDetailsContent">
+                    <!-- Content will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // Wait for DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Checkbox functionality
+            document.getElementById('selectAll').addEventListener('change', function() {
+                const checkboxes = document.querySelectorAll('.payment-checkbox');
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = this.checked;
+                });
+                toggleBulkActions();
+            });
+
+            // Individual checkbox change
+            document.addEventListener('change', function(e) {
+                if (e.target.classList.contains('payment-checkbox')) {
+                    toggleBulkActions();
+                    updateSelectAllCheckbox();
+                }
+            });
+
+            // Header action buttons
+            document.getElementById('exportPaymentsBtn').addEventListener('click', exportPayments);
+            document.getElementById('approveAllPendingBtn').addEventListener('click', approveAllPending);
+
+            // Bulk action buttons
+            document.getElementById('bulkApproveBtn').addEventListener('click', bulkApprove);
+            document.getElementById('bulkRejectBtn').addEventListener('click', bulkReject);
+            document.getElementById('bulkDownloadBtn').addEventListener('click', bulkDownload);
+            document.getElementById('clearSelectionBtn').addEventListener('click', clearSelection);
+
+            // Payment action buttons
+            document.addEventListener('click', function(e) {
+                const target = e.target.closest('button');
+                if (!target) return;
+
+                const paymentId = target.getAttribute('data-payment-id');
+                
+                if (target.classList.contains('payment-view-btn')) {
+                    viewPayment(paymentId);
+                } else if (target.classList.contains('payment-approve-btn')) {
+                    approvePayment(paymentId);
+                } else if (target.classList.contains('payment-reject-btn')) {
+                    rejectPayment(paymentId);
+                } else if (target.classList.contains('payment-receipt-btn')) {
+                    downloadReceipt(paymentId);
+                }
+            });
+        });
+
+        function toggleBulkActions() {
+            const checkedBoxes = document.querySelectorAll('.payment-checkbox:checked');
+            const bulkActions = document.getElementById('bulkActions');
+            if (checkedBoxes.length > 0) {
+                bulkActions.style.display = 'block';
+            } else {
+                bulkActions.style.display = 'none';
+            }
+        }
+
+        function updateSelectAllCheckbox() {
+            const checkboxes = document.querySelectorAll('.payment-checkbox');
+            const checkedBoxes = document.querySelectorAll('.payment-checkbox:checked');
+            const selectAllCheckbox = document.getElementById('selectAll');
+            
+            if (checkedBoxes.length === 0) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = false;
+            } else if (checkedBoxes.length === checkboxes.length) {
+                selectAllCheckbox.indeterminate = false;
+                selectAllCheckbox.checked = true;
+            } else {
+                selectAllCheckbox.indeterminate = true;
+            }
+        }
+
+        function clearSelection() {
+            document.querySelectorAll('.payment-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            document.getElementById('selectAll').checked = false;
+            document.getElementById('selectAll').indeterminate = false;
+            toggleBulkActions();
+        }
+
+        function getSelectedPayments() {
+            const checkedBoxes = document.querySelectorAll('.payment-checkbox:checked');
+            return Array.from(checkedBoxes).map(checkbox => checkbox.value);
+        }
+
+        function bulkApprove() {
+            const selectedIds = getSelectedPayments();
+            if (selectedIds.length === 0) {
+                alert('Please select payments to approve');
+                return;
+            }
+
+            if (confirm(`Approve ${selectedIds.length} selected payments?`)) {
+                Promise.all(selectedIds.map(id => 
+                    fetch(`/admin/payments/${id}/approve`, { method: 'POST' })
+                        .then(response => response.json())
+                )).then(results => {
+                    const successful = results.filter(r => r.success).length;
+                    alert(`Successfully approved ${successful} out of ${selectedIds.length} payments`);
+                    location.reload();
+                }).catch(error => {
+                    alert('Error during bulk approval');
+                    console.error('Error:', error);
+                });
+            }
+        }
+
+        function bulkReject() {
+            const selectedIds = getSelectedPayments();
+            if (selectedIds.length === 0) {
+                alert('Please select payments to reject');
+                return;
+            }
+
+            const reason = prompt('Enter rejection reason (optional):');
+            if (confirm(`Reject ${selectedIds.length} selected payments?`)) {
+                Promise.all(selectedIds.map(id => 
+                    fetch(`/admin/payments/${id}/reject`, { 
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ reason: reason })
+                    }).then(response => response.json())
+                )).then(results => {
+                    const successful = results.filter(r => r.success).length;
+                    alert(`Successfully rejected ${successful} out of ${selectedIds.length} payments`);
+                    location.reload();
+                }).catch(error => {
+                    alert('Error during bulk rejection');
+                    console.error('Error:', error);
+                });
+            }
+        }
+
+        function bulkDownload() {
+            const selectedIds = getSelectedPayments();
+            if (selectedIds.length === 0) {
+                alert('Please select payments to download receipts');
+                return;
+            }
+
+            // Download receipts one by one
+            selectedIds.forEach(id => {
+                setTimeout(() => {
+                    window.open(`/admin/payments/${id}/receipt`, '_blank');
+                }, 500); // Small delay to prevent browser blocking
+            });
+        }
+
+        function viewPayment(paymentId) {
+            fetch(`/admin/payments/${paymentId}/details`)
+                .then(response => response.json())
+                .then(payment => {
+                    const content = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Payment Information</h6>
+                                <p><strong>Transaction ID:</strong> ${payment.transaction_id}</p>
+                                <p><strong>External ID:</strong> ${payment.external_transaction_id || 'N/A'}</p>
+                                <p><strong>Amount:</strong> <span class="fw-bold">${payment.amount} ${payment.currency}</span></p>
+                                <p><strong>Method:</strong> ${payment.payment_method.toUpperCase()}</p>
+                                <p><strong>Status:</strong> <span class="badge bg-${payment.status === 'completed' ? 'success' : payment.status === 'pending' ? 'warning' : 'danger'}">${payment.status.toUpperCase()}</span></p>
+                                <p><strong>Type:</strong> ${payment.payment_type || 'subscription'}</p>
+                                <p><strong>Created:</strong> ${new Date(payment.created_at).toLocaleString()}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>User Information</h6>
+                                <p><strong>Name:</strong> ${payment.user_name}</p>
+                                <p><strong>Email:</strong> ${payment.user_email}</p>
+                                <p><strong>Phone:</strong> ${payment.user_phone || 'N/A'}</p>
+                                ${payment.database_name ? `<p><strong>Database:</strong> ${payment.database_name}</p>` : ''}
+                            </div>
+                        </div>
+                        <hr>
+                        <div class="row">
+                            <div class="col-12">
+                                <h6>Payment Metadata</h6>
+                                <div class="bg-light p-3 rounded">
+                                    <pre>${JSON.stringify(payment.metadata || {}, null, 2)}</pre>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('paymentDetailsContent').innerHTML = content;
+                    new bootstrap.Modal(document.getElementById('paymentDetailsModal')).show();
+                })
+                .catch(error => {
+                    alert('Error loading payment details');
+                    console.error('Error:', error);
+                });
+        }
+
+        function approvePayment(paymentId) {
+            if (confirm('Approve this payment?')) {
+                fetch(`/admin/payments/${paymentId}/approve`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        location.reload();
+                    } else {
+                        alert('Error approving payment: ' + result.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Error approving payment');
+                    console.error('Error:', error);
+                });
+            }
+        }
+
+        function rejectPayment(paymentId) {
+            const reason = prompt('Reason for rejection (optional):');
+            if (confirm('Reject this payment?')) {
+                fetch(`/admin/payments/${paymentId}/reject`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ reason: reason })
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        location.reload();
+                    } else {
+                        alert('Error rejecting payment: ' + result.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Error rejecting payment');
+                    console.error('Error:', error);
+                });
+            }
+        }
+
+        function downloadReceipt(paymentId) {
+            window.open(`/admin/payments/${paymentId}/receipt`, '_blank');
+        }
+
+        function exportPayments() {
+            const params = new URLSearchParams(window.location.search);
+            window.open(`/admin/payments/export?${params.toString()}`, '_blank');
+        }
+
+        function approveAllPending() {
+            if (confirm('Approve all pending payments? This action cannot be undone.')) {
+                fetch('/admin/payments/approve-all', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        alert(`Successfully approved ${result.count} payments`);
+                        location.reload();
+                    } else {
+                        alert('Error approving payments: ' + result.message);
+                    }
+                })
+                .catch(error => {
+                    alert('Error approving payments');
+                    console.error('Error:', error);
+                });
+            }
+        }
+
+        // Auto-refresh every 30 seconds for real-time updates
+        setInterval(() => {
+            if (!document.querySelector('.modal.show')) {
+                location.reload();
+            }
+        }, 30000);
+    </script>
+</body>
+</html> 

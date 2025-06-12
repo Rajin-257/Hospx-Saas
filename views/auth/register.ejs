@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Webuzo SaaS</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .register-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: none;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        }
+        .form-control.is-valid {
+            border-color: #28a745;
+        }
+        .form-control.is-invalid {
+            border-color: #dc3545;
+        }
+        .validation-message {
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+        .loading {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center align-items-center min-vh-100 py-4">
+            <div class="col-lg-6 col-md-8">
+                <div class="card register-card">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <h2 class="fw-bold text-primary">
+                                <i class="fas fa-user-plus me-2"></i>Create Account
+                            </h2>
+                            <p class="text-muted">Join Webuzo SaaS Platform</p>
+                        </div>
+
+                        <!-- Flash Messages -->
+                        <% if (typeof success_msg !== 'undefined' && success_msg.length > 0) { %>
+                            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                <%= success_msg %>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        <% } %>
+
+                        <% if (typeof error_msg !== 'undefined' && error_msg.length > 0) { %>
+                            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                                <%= error_msg %>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        <% } %>
+
+                        <form id="registerForm" action="/register" method="POST" novalidate>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="full_name" class="form-label">Full Name *</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-user"></i>
+                                        </span>
+                                        <input type="text" class="form-control" id="full_name" name="full_name" required>
+                                    </div>
+                                    <div class="validation-message"></div>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    <label for="phone" class="form-label">Phone Number *</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-phone"></i>
+                                        </span>
+                                        <input type="tel" class="form-control" id="phone" name="phone" 
+                                               placeholder="01XXXXXXXXX" required>
+                                    </div>
+                                    <div class="validation-message"></div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email Address *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-envelope"></i>
+                                    </span>
+                                    <input type="email" class="form-control" id="email" name="email" required>
+                                    <button type="button" class="btn btn-outline-secondary" id="checkEmail">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </div>
+                                <div class="validation-message"></div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="domain_type" class="form-label">Domain Type *</label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="domain_type" id="subdomain_option" value="subdomain" checked>
+                                            <label class="form-check-label" for="subdomain_option">
+                                                <i class="fas fa-link me-1"></i>Subdomain
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="domain_type" id="custom_domain_option" value="custom">
+                                            <label class="form-check-label" for="custom_domain_option">
+                                                <i class="fas fa-globe me-1"></i>Custom Domain
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="expected_domain" class="form-label">Expected Domain *</label>
+                                
+                                <!-- Subdomain Input -->
+                                <div class="input-group" id="subdomain_input">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-link"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="subdomain_name" name="subdomain_name" 
+                                           placeholder="yourname" pattern="[a-zA-Z0-9-]+" required>
+                                    <span class="input-group-text">.hospx.com</span>
+                                    <button type="button" class="btn btn-outline-secondary" id="checkSubdomain">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Custom Domain Input -->
+                                <div class="input-group" id="custom_domain_input" style="display: none;">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-globe"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="custom_domain_name" name="custom_domain_name" 
+                                           placeholder="example.com">
+                                    <button type="button" class="btn btn-outline-secondary" id="checkCustomDomain">
+                                        <i class="fas fa-search"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Hidden field for actual domain value -->
+                                <input type="hidden" id="expected_domain" name="expected_domain">
+                                
+                                <div class="validation-message"></div>
+                                <div class="form-text">
+                                    <small id="domain_help_text">
+                                        Choose a subdomain (yourname.hospx.com) or use your own custom domain
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="reference_code" class="form-label">Reference Code</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-tag"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="reference_code" name="reference_code" 
+                                           placeholder="Enter reference code if you have one">
+                                    <button type="button" class="btn btn-outline-secondary" id="validateRef">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </div>
+                                <div class="validation-message"></div>
+                                <div id="referrer-info" class="mt-2" style="display: none;">
+                                    <div class="alert alert-info">
+                                        <strong>Referred by:</strong> <span id="referrer-name"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="agree_terms" name="agree_terms" required>
+                                <label class="form-check-label" for="agree_terms">
+                                    I agree to the <a href="/terms" target="_blank">Terms of Service</a> and 
+                                    <a href="/privacy" target="_blank">Privacy Policy</a>
+                                </label>
+                            </div>
+
+                            <div class="d-grid gap-2 mb-3">
+                                <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                    <i class="fas fa-user-plus me-2"></i>Create Account
+                                </button>
+                                <div class="loading text-center">
+                                    <i class="fas fa-spinner fa-spin"></i> Creating account...
+                                </div>
+                            </div>
+                        </form>
+
+                        <hr class="my-4">
+
+                        <div class="text-center">
+                            <p class="mb-0">Already have an account?</p>
+                            <a href="/login" class="btn btn-outline-primary mt-2">
+                                <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                            </a>
+                        </div>
+
+                        <div class="text-center mt-3">
+                            <a href="/" class="text-muted text-decoration-none">
+                                <i class="fas fa-arrow-left me-1"></i>Back to Home
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Domain type switching
+            $('input[name="domain_type"]').change(function() {
+                const domainType = $(this).val();
+                
+                if (domainType === 'subdomain') {
+                    $('#subdomain_input').show();
+                    $('#custom_domain_input').hide();
+                    $('#subdomain_name').prop('required', true);
+                    $('#custom_domain_name').prop('required', false);
+                    $('#domain_help_text').text('Choose a subdomain (yourname.hospx.com)');
+                    updateExpectedDomain();
+                } else {
+                    $('#subdomain_input').hide();
+                    $('#custom_domain_input').show();
+                    $('#subdomain_name').prop('required', false);
+                    $('#custom_domain_name').prop('required', true);
+                    $('#domain_help_text').text('Enter your own custom domain (example.com)');
+                    updateExpectedDomain();
+                }
+            });
+
+            // Update expected_domain hidden field
+            function updateExpectedDomain() {
+                const domainType = $('input[name="domain_type"]:checked').val();
+                let expectedDomain = '';
+                
+                if (domainType === 'subdomain') {
+                    const subdomain = $('#subdomain_name').val();
+                    if (subdomain) {
+                        expectedDomain = subdomain + '.hospx.com';
+                    }
+                } else {
+                    expectedDomain = $('#custom_domain_name').val();
+                }
+                
+                $('#expected_domain').val(expectedDomain);
+            }
+
+            // Update hidden field when user types
+            $('#subdomain_name, #custom_domain_name').on('input', function() {
+                updateExpectedDomain();
+            });
+
+            // Initialize
+            updateExpectedDomain();
+
+            // Email validation
+            $('#checkEmail').click(function() {
+                const email = $('#email').val();
+                if (!email) {
+                    showValidation('email', false, 'Please enter an email address');
+                    return;
+                }
+
+                $.post('/api/validate-email', { email: email })
+                    .done(function(data) {
+                        if (data.exists) {
+                            showValidation('email', false, 'Email already registered');
+                        } else {
+                            showValidation('email', true, 'Email available');
+                        }
+                    })
+                    .fail(function() {
+                        showValidation('email', false, 'Error checking email');
+                    });
+            });
+
+            // Subdomain validation
+            $('#checkSubdomain').click(function() {
+                const subdomain = $('#subdomain_name').val();
+                if (!subdomain) {
+                    showValidation('subdomain_name', false, 'Please enter a subdomain');
+                    return;
+                }
+
+                // Validate subdomain format
+                const subdomainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/;
+                if (!subdomainRegex.test(subdomain)) {
+                    showValidation('subdomain_name', false, 'Invalid subdomain format. Use only letters, numbers, and hyphens.');
+                    return;
+                }
+
+                if (subdomain.length < 3 || subdomain.length > 20) {
+                    showValidation('subdomain_name', false, 'Subdomain must be between 3-20 characters');
+                    return;
+                }
+
+                $.post('/api/validate-subdomain', { subdomain: subdomain })
+                    .done(function(data) {
+                        if (data.exists) {
+                            showValidation('subdomain_name', false, 'Subdomain already registered');
+                        } else {
+                            showValidation('subdomain_name', true, 'Subdomain available');
+                            updateExpectedDomain();
+                        }
+                    })
+                    .fail(function() {
+                        showValidation('subdomain_name', false, 'Error checking subdomain');
+                    });
+            });
+
+            // Custom domain validation
+            $('#checkCustomDomain').click(function() {
+                const customDomain = $('#custom_domain_name').val();
+                if (!customDomain) {
+                    showValidation('custom_domain_name', false, 'Please enter a custom domain');
+                    return;
+                }
+
+                // Validate domain format
+                const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z]{2,})+$/;
+                if (!domainRegex.test(customDomain)) {
+                    showValidation('custom_domain_name', false, 'Invalid domain format');
+                    return;
+                }
+
+                $.post('/api/validate-domain', { domain: customDomain })
+                    .done(function(data) {
+                        if (data.exists) {
+                            showValidation('custom_domain_name', false, 'Domain already registered');
+                        } else {
+                            showValidation('custom_domain_name', true, 'Domain available');
+                            updateExpectedDomain();
+                        }
+                    })
+                    .fail(function() {
+                        showValidation('custom_domain_name', false, 'Error checking domain');
+                    });
+            });
+
+            // Reference code validation
+            $('#validateRef').click(function() {
+                const referenceCode = $('#reference_code').val();
+                if (!referenceCode) {
+                    showValidation('reference_code', false, 'Please enter a reference code');
+                    return;
+                }
+
+                $.post('/api/validate-reference', { reference_code: referenceCode })
+                    .done(function(data) {
+                        if (data.valid) {
+                            showValidation('reference_code', true, 'Valid reference code');
+                            $('#referrer-name').text(data.referrer.name);
+                            $('#referrer-info').show();
+                        } else {
+                            showValidation('reference_code', false, 'Invalid reference code');
+                            $('#referrer-info').hide();
+                        }
+                    })
+                    .fail(function() {
+                        showValidation('reference_code', false, 'Error validating reference code');
+                    });
+            });
+
+            // Form submission
+            $('#registerForm').on('submit', function(e) {
+                e.preventDefault();
+                
+                // Update expected_domain before submission
+                updateExpectedDomain();
+                
+                // Validate required fields
+                const domainType = $('input[name="domain_type"]:checked').val();
+                const expectedDomain = $('#expected_domain').val();
+                
+                if (!expectedDomain) {
+                    if (domainType === 'subdomain') {
+                        showValidation('subdomain_name', false, 'Please enter a subdomain');
+                    } else {
+                        showValidation('custom_domain_name', false, 'Please enter a custom domain');
+                    }
+                    return;
+                }
+                
+                $('#submitBtn').hide();
+                $('.loading').show();
+                
+                this.submit();
+            });
+
+            function showValidation(fieldId, isValid, message) {
+                const field = $('#' + fieldId);
+                const messageDiv = field.closest('.mb-3').find('.validation-message');
+                
+                field.removeClass('is-valid is-invalid');
+                field.addClass(isValid ? 'is-valid' : 'is-invalid');
+                
+                messageDiv.removeClass('text-success text-danger');
+                messageDiv.addClass(isValid ? 'text-success' : 'text-danger');
+                messageDiv.text(message);
+            }
+        });
+    </script>
+</body>
+</html> 

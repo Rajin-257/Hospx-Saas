@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %> - Webuzo SaaS</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #e91e63 0%, #c2185b 100%);
+            min-height: 100vh;
+        }
+        .payment-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: none;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center align-items-center min-vh-100 py-4">
+            <div class="col-lg-5 col-md-7">
+                <div class="card payment-card">
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <i class="fas fa-mobile-alt fa-3x text-danger mb-3"></i>
+                            <h2 class="fw-bold text-danger">bKash Payment</h2>
+                            <p class="text-muted">Enter your payment details</p>
+                        </div>
+
+                        <div class="alert alert-info mb-4">
+                            <h6>Payment Instructions:</h6>
+                            <ol class="mb-0">
+                                <li>Dial *247# from your mobile</li>
+                                <li>Send money to our merchant number</li>
+                                <li>Enter the transaction ID below</li>
+                                <li>Complete your payment</li>
+                            </ol>
+                        </div>
+
+                        <form action="/payment/bkash/process" method="POST">
+                            <input type="hidden" name="payment_type" value="<%= paymentData.type %>">
+                            <input type="hidden" name="database_id" value="<%= paymentData.database_id %>">
+                            
+                            <div class="mb-3">
+                                <label for="amount" class="form-label">Amount</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">BDT</span>
+                                    <input type="number" class="form-control" id="amount" name="amount" 
+                                           value="<%= paymentData.amount %>" readonly>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">Your bKash Number</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-phone"></i>
+                                    </span>
+                                    <input type="tel" class="form-control" id="phone" name="phone" 
+                                           placeholder="01XXXXXXXXX" required>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="transaction_id" class="form-label">Transaction ID</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-receipt"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="transaction_id" name="transaction_id" 
+                                           placeholder="Enter bKash transaction ID" required>
+                                </div>
+                                <div class="form-text">You will receive this ID after completing the payment via bKash</div>
+                            </div>
+
+                            <div class="d-grid gap-2 mb-3">
+                                <button type="submit" class="btn btn-danger btn-lg">
+                                    <i class="fas fa-check me-2"></i>Confirm Payment
+                                </button>
+                            </div>
+                        </form>
+
+                        <div class="text-center">
+                            <a href="/payment/select/<%= paymentData.type %>" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Choose Another Method
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html> 
