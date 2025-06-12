@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<%- include('../partials/head') %>
+<body>
+    <%- include('../partials/navbar-admin', { currentPage: 'db-management' }) %>
+    <%- include('../partials/flash-messages') %>
+
+    <div class="container mt-4">
+        <!-- Page Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="h4 mb-3">
+                    <i class="fas fa-database me-2"></i>Database Management
+                </h2>
+                <p class="text-muted">Upload and manage SQL files for database creation</p>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Upload Section -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-upload me-2"></i>Upload SQL File
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form action="/admin/db-management/upload" method="POST" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="sqlFile" class="form-label">
+                                    Select SQL File <span class="text-danger">*</span>
+                                </label>
+                                <input type="file" 
+                                       class="form-control" 
+                                       id="sqlFile" 
+                                       name="sqlFile" 
+                                       accept=".sql" 
+                                       required>
+                                <div class="form-text">
+                                    <i class="fas fa-info-circle"></i>
+                                    Only .sql files are allowed. The file will be saved as <code>dbcreate.sql</code>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="confirmOverwrite" name="confirmOverwrite">
+                                    <label class="form-check-label" for="confirmOverwrite">
+                                        I understand this will overwrite the existing <code>dbcreate.sql</code> file if it exists
+                                    </label>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-upload me-2"></i>Upload SQL File
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current File Status -->
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-file-alt me-2"></i>Current SQL File
+                        </h5>
+                        <% if (sqlFileExists) { %>
+                            <span class="badge bg-success">File Available</span>
+                        <% } else { %>
+                            <span class="badge bg-warning">No File</span>
+                        <% } %>
+                    </div>
+                    <div class="card-body">
+                        <% if (sqlFileExists) { %>
+                            <div class="d-flex align-items-center justify-content-between mb-3">
+                                <div>
+                                    <h6 class="mb-1">dbcreate.sql</h6>
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        Last modified: <%= fileLastModified %>
+                                    </small>
+                                    <br>
+                                    <small class="text-muted">
+                                        <i class="fas fa-weight me-1"></i>
+                                        Size: <%= fileSize %>
+                                    </small>
+                                </div>
+                                <div>
+                                    <i class="fas fa-file-code fa-2x text-primary"></i>
+                                </div>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <a href="/admin/db-management/download" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-download me-1"></i>Download
+                                </a>
+                                <button type="button" 
+                                        class="btn btn-outline-danger btn-sm" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#deleteModal">
+                                    <i class="fas fa-trash me-1"></i>Delete
+                                </button>
+                            </div>
+                        <% } else { %>
+                            <div class="text-center py-4">
+                                <i class="fas fa-file-upload fa-3x text-muted mb-3"></i>
+                                <p class="text-muted mb-0">No SQL file uploaded yet</p>
+                                <small class="text-muted">Upload a SQL file to get started</small>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-database me-2"></i>Database sql Execute
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form action="/admin/db-management/execute-sql" method="POST">
+                            <div class="mb-3">
+                                <label for="database" class="form-label">
+                                    Select Databases
+                                </label>
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="selectAllDatabases">
+                                    <label class="form-check-label" for="selectAllDatabases">
+                                        Select All Databases
+                                    </label>
+                                </div>
+                                <div class="mb-2">
+                                    <input type="text" class="form-control" id="databaseSearch" placeholder="Search databases...">
+                                </div>
+                                <select class="form-select" id="database" name="database" required multiple>
+                                    <% databases.forEach(function(db) { %>
+                                        <option value="<%= db.database_name %>" 
+                                                data-user="<%= db.user_name %>"
+                                                data-domain="<%= db.domain_name || '' %>">
+                                            <%= db.database_name %>
+                                            <% if (db.user_name) { %> (User: <%= db.user_name %>)<% } %>
+                                            <% if (db.domain_name) { %> - <%= db.domain_name %><% } %>
+                                        </option>
+                                    <% }); %>
+                                </select>
+                                <div class="form-text">
+                                    Hold Ctrl (Windows) or Command (Mac) to select multiple databases
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="sqlQuery" class="form-label">
+                                    Enter SQL Query
+                                </label>
+                                <textarea class="form-control" id="sqlQuery" name="sqlQuery" rows="5" required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-play me-2"></i>Execute SQL
+                            </button>
+                        </form>
+
+                        <% if (typeof sql_results !== 'undefined' && sql_results) { %>
+                            <div class="mt-4">
+                                <h6 class="mb-3">Query Results:</h6>
+                                <div class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;">
+                                    <pre class="mb-0"><code><%= sql_results %></code></pre>
+                                </div>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Preview Section (if file exists) -->
+        <% if (sqlFileExists) { %>
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-eye me-2"></i>File Preview
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="showPreview">
+                            <label class="form-check-label" for="showPreview">
+                                Show file content preview
+                            </label>
+                        </div>
+                        <div id="previewContent" class="d-none">
+                            <pre class="bg-light p-3 rounded" style="max-height: 400px; overflow-y: auto;"><code><%= fileContent %></code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <% } %>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-triangle me-2 text-warning"></i>
+                        Confirm Deletion
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the <code>dbcreate.sql</code> file?</p>
+                    <p class="text-danger"><strong>This action cannot be undone.</strong></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form action="/admin/db-management/delete" method="POST" class="d-inline">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-1"></i>Delete File
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%- include('../partials/scripts') %>
+    
+    <script>
+        // Toggle file preview
+        document.getElementById('showPreview').addEventListener('change', function() {
+            const previewContent = document.getElementById('previewContent');
+            if (this.checked) {
+                previewContent.classList.remove('d-none');
+            } else {
+                previewContent.classList.add('d-none');
+            }
+        });
+
+        // Select All Databases functionality
+        document.getElementById('selectAllDatabases').addEventListener('change', function() {
+            const databaseSelect = document.getElementById('database');
+            const options = databaseSelect.options;
+            
+            for (let i = 0; i < options.length; i++) {
+                if (!options[i].classList.contains('d-none')) {
+                    options[i].selected = this.checked;
+                }
+            }
+        });
+
+        // Update Select All checkbox when individual selections change
+        document.getElementById('database').addEventListener('change', function() {
+            const selectAllCheckbox = document.getElementById('selectAllDatabases');
+            const options = this.options;
+            let allSelected = true;
+            
+            for (let i = 0; i < options.length; i++) {
+                if (!options[i].classList.contains('d-none') && !options[i].selected) {
+                    allSelected = false;
+                    break;
+                }
+            }
+            
+            selectAllCheckbox.checked = allSelected;
+        });
+
+        // Database search functionality
+        document.getElementById('databaseSearch').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const databaseSelect = document.getElementById('database');
+            const options = databaseSelect.options;
+            let visibleCount = 0;
+            
+            for (let i = 0; i < options.length; i++) {
+                const option = options[i];
+                const text = option.text.toLowerCase();
+                const user = option.dataset.user ? option.dataset.user.toLowerCase() : '';
+                const domain = option.dataset.domain ? option.dataset.domain.toLowerCase() : '';
+                
+                if (text.includes(searchTerm) || user.includes(searchTerm) || domain.includes(searchTerm)) {
+                    option.classList.remove('d-none');
+                    visibleCount++;
+                } else {
+                    option.classList.add('d-none');
+                    option.selected = false;
+                }
+            }
+            
+            // Update select all checkbox
+            const selectAllCheckbox = document.getElementById('selectAllDatabases');
+            selectAllCheckbox.checked = visibleCount > 0 && Array.from(options).every(opt => 
+                opt.classList.contains('d-none') || opt.selected
+            );
+        });
+
+        // Form validation for upload
+        document.querySelector('form[action="/admin/db-management/upload"]').addEventListener('submit', function(e) {
+            const confirmOverwrite = document.getElementById('confirmOverwrite');
+            const sqlFileExists = `<%- JSON.stringify(sqlFileExists) %>`;
+            
+            if (sqlFileExists && !confirmOverwrite.checked) {
+                e.preventDefault();
+                alert('Please confirm that you want to overwrite the existing file.');
+                return false;
+            }
+        });
+    </script>
+</body>
+</html> 

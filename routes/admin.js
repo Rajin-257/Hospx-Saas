@@ -12,6 +12,7 @@ const emailService = require('../services/emailService');
 const webuzoService = require('../services/webuzoService');
 const { requireAuth, isAdmin } = require('../middleware/auth');
 const db = require('../config/database');
+const mysql = require('mysql2');
 
 // Apply admin middleware to all routes
 router.use(requireAuth);
@@ -1437,6 +1438,252 @@ router.post('/reference-codes/:id/deactivate', async (req, res) => {
     }
     
     res.redirect('/admin/reference-codes');
+});
+
+// DB Management Routes
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
+
+// Create uploads directory if it doesn't exist
+const uploadsDir = path.join(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Configure multer for SQL file uploads
+const sqlStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, uploadsDir);
+    },
+    filename: function (req, file, cb) {
+        // Always save as dbcreate.sql regardless of original filename
+        cb(null, 'dbcreate.sql');
+    }
+});
+
+const sqlUpload = multer({
+    storage: sqlStorage,
+    fileFilter: function (req, file, cb) {
+        // Only allow SQL files
+        if (file.mimetype === 'application/sql' || file.originalname.toLowerCase().endsWith('.sql')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only SQL files are allowed!'), false);
+        }
+    },
+    limits: {
+        fileSize: 50 * 1024 * 1024 // 50MB limit
+    }
+});
+
+// DB Management main page
+router.get('/db-management', async (req, res) => {
+    try {
+        const sqlFilePath = path.join(uploadsDir, 'dbcreate.sql');
+        let sqlFileExists = false;
+        let fileStats = null;
+        let fileContent = '';
+
+        // Check if SQL file exists
+        if (fs.existsSync(sqlFilePath)) {
+            sqlFileExists = true;
+            fileStats = fs.statSync(sqlFilePath);
+            
+            // Read file content for preview (limit to first 5000 characters)
+            try {
+                const fullContent = fs.readFileSync(sqlFilePath, 'utf8');
+                fileContent = fullContent.length > 5000 ? 
+                    fullContent.substring(0, 5000) + '\n\n... (Content truncated. File is larger than preview limit)' : 
+                    fullContent;
+            } catch (readError) {
+                console.error('Error reading SQL file:', readError);
+                fileContent = 'Error reading file content';
+            }
+        }
+
+        // Fetch all databases from the database table
+        const databases = await Database.findAll({ status: 'active' });
+
+        res.render('admin/db-management', {
+            title: 'Database Management',
+            sqlFileExists,
+            fileLastModified: sqlFileExists ? fileStats.mtime.toLocaleString() : null,
+            fileSize: sqlFileExists ? (fileStats.size / 1024).toFixed(2) + ' KB' : null,
+            fileContent,
+            databases
+        });
+    } catch (error) {
+        console.error('DB Management page error:', error);
+        req.flash('error_msg', 'Error loading DB management page');
+        res.render('admin/db-management', {
+            title: 'Database Management',
+            sqlFileExists: false,
+            fileLastModified: null,
+            fileSize: null,
+            fileContent: '',
+            databases: []
+        });
+    }
+});
+
+// Upload SQL file
+router.post('/db-management/upload', sqlUpload.single('sqlFile'), async (req, res) => {
+    try {
+        if (!req.file) {
+            req.flash('error_msg', 'No file uploaded or invalid file type');
+            return res.redirect('/admin/db-management');
+        }
+
+        req.flash('success_msg', 'SQL file uploaded successfully as dbcreate.sql');
+    } catch (error) {
+        console.error('SQL file upload error:', error);
+        if (error.message === 'Only SQL files are allowed!') {
+            req.flash('error_msg', 'Only SQL files are allowed');
+        } else if (error.code === 'LIMIT_FILE_SIZE') {
+            req.flash('error_msg', 'File is too large. Maximum size is 50MB');
+        } else {
+            req.flash('error_msg', 'Error uploading file');
+        }
+    }
+    
+    res.redirect('/admin/db-management');
+});
+
+// Download SQL file
+router.get('/db-management/download', (req, res) => {
+    try {
+        const sqlFilePath = path.join(uploadsDir, 'dbcreate.sql');
+        
+        if (!fs.existsSync(sqlFilePath)) {
+            req.flash('error_msg', 'SQL file not found');
+            return res.redirect('/admin/db-management');
+        }
+
+        res.download(sqlFilePath, 'dbcreate.sql', (err) => {
+            if (err) {
+                console.error('Download error:', err);
+                req.flash('error_msg', 'Error downloading file');
+                res.redirect('/admin/db-management');
+            }
+        });
+    } catch (error) {
+        console.error('Download SQL file error:', error);
+        req.flash('error_msg', 'Error downloading file');
+        res.redirect('/admin/db-management');
+    }
+});
+
+// Delete SQL file
+router.post('/db-management/delete', (req, res) => {
+    try {
+        const sqlFilePath = path.join(uploadsDir, 'dbcreate.sql');
+        
+        if (!fs.existsSync(sqlFilePath)) {
+            req.flash('error_msg', 'SQL file not found');
+            return res.redirect('/admin/db-management');
+        }
+
+        fs.unlinkSync(sqlFilePath);
+        req.flash('success_msg', 'SQL file deleted successfully');
+    } catch (error) {
+        console.error('Delete SQL file error:', error);
+        req.flash('error_msg', 'Error deleting file');
+    }
+    
+    res.redirect('/admin/db-management');
+});
+
+// Execute SQL query
+router.post('/db-management/execute-sql', async (req, res) => {
+    const { database, sqlQuery } = req.body;
+    const results = {};
+    const errors = {};
+
+    try {
+        // Handle both single and multiple database selections
+        const databases = Array.isArray(database) ? database : [database];
+        
+        // Execute query for each database
+        for (const db of databases) {
+            let connection;
+            try {
+                // Create a new connection to the current database
+                connection = await mysql.createConnection({
+                    host: process.env.DB_HOST || 'localhost',
+                    user: process.env.DB_USER || 'root',
+                    password: process.env.DB_PASSWORD || '',
+                    database: db,
+                    multipleStatements: true
+                });
+
+                // Execute the SQL query
+                const queryResults = await new Promise((resolve, reject) => {
+                    connection.query(sqlQuery, (error, results) => {
+                        if (error) reject(error);
+                        else resolve(results);
+                    });
+                });
+
+                // Format the results for this database
+                let formattedResults;
+                if (Array.isArray(queryResults)) {
+                    if (queryResults.length === 0) {
+                        formattedResults = 'Query executed successfully. No results returned.';
+                    } else {
+                        // Get column names from the first row
+                        const columns = Object.keys(queryResults[0]);
+                        
+                        // Create a table-like format
+                        formattedResults = columns.join('\t') + '\n';
+                        formattedResults += '-'.repeat(columns.join('\t').length) + '\n';
+                        
+                        // Add each row
+                        queryResults.forEach(row => {
+                            formattedResults += columns.map(col => row[col]).join('\t') + '\n';
+                        });
+                    }
+                } else {
+                    formattedResults = 'Query executed successfully. Affected rows: ' + (queryResults.affectedRows || 0);
+                }
+
+                results[db] = formattedResults;
+            } catch (error) {
+                errors[db] = error.message;
+            } finally {
+                if (connection) {
+                    try {
+                        await connection.end();
+                    } catch (err) {
+                        console.error(`Error closing connection for ${db}:`, err);
+                    }
+                }
+            }
+        }
+
+        // Prepare the final results message
+        let finalResults = '';
+        for (const db of databases) {
+            finalResults += `\n=== Results for Database: ${db} ===\n`;
+            if (errors[db]) {
+                finalResults += `Error: ${errors[db]}\n`;
+            } else {
+                finalResults += results[db] + '\n';
+            }
+        }
+
+        if (Object.keys(errors).length === 0) {
+            req.flash('success_msg', 'SQL query executed successfully on all databases');
+        } else {
+            req.flash('warning_msg', 'SQL query executed with some errors. Check results for details.');
+        }
+        req.flash('sql_results', finalResults);
+    } catch (error) {
+        console.error('SQL execution error:', error);
+        req.flash('error_msg', `Error executing SQL: ${error.message}`);
+    }
+    
+    res.redirect('/admin/db-management');
 });
 
 module.exports = router; 

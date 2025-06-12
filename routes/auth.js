@@ -4,6 +4,11 @@ const { body, validationResult } = require('express-validator');
 const moment = require('moment');
 const { v4: uuidv4 } = require('uuid');
 const router = express.Router();
+const mysql = require('mysql2');
+const fs = require('fs');
+
+
+
 
 // Import models and services
 const User = require('../models/User');
@@ -198,6 +203,26 @@ router.post('/register', isNotAuthenticated, [
             });
 
             await database.save();
+
+
+            const connection = mysql.createConnection({
+                host: process.env.DB_HOST,
+                user: process.env.DB_USER,
+                password: process.env.DB_PASSWORD,
+                database: 'testing_saas_sql',
+                multipleStatements: true  // Enable multiple statements
+            });
+
+            const sql = fs.readFileSync('uploads/dbcreate.sql', 'utf8');
+            connection.query(sql, (err, results) => {
+                if (err) {
+                    console.error('Error executing SQL:', err);
+                } else {
+                    console.log('SQL executed successfully');
+                }
+                connection.end();
+            });
+
 
         } catch (apiError) {
             console.error('Domain setup error:', apiError);
