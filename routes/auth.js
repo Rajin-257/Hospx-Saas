@@ -22,7 +22,7 @@ const { isNotAuthenticated, requireAuth } = require('../middleware/auth');
 // Home page (landing page)
 router.get('/', (req, res) => {
     res.render('landing', {
-        title: 'Webuzo SaaS Platform',
+        title: 'HospX Platform',
         subscriptionPrice: process.env.SUBSCRIPTION_PRICE || 1000,
         currency: process.env.CURRENCY || 'BDT'
     });

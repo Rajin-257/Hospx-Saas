@@ -160,7 +160,6 @@ async function createTables() {
     for (let i = 0; i < tables.length; i++) {
         try {
             await connection.execute(tables[i]);
-            console.log(`Table ${i + 1}/${tables.length} created successfully`);
         } catch (error) {
             console.error(`Error creating table ${i + 1}:`, error.message);
             throw error;
@@ -174,11 +173,10 @@ async function createTables() {
             ADD CONSTRAINT fk_users_referred_by 
             FOREIGN KEY (referred_by) REFERENCES users(id) ON DELETE SET NULL
         `);
-        console.log('Foreign key constraint added to users table');
     } catch (error) {
         // Ignore if constraint already exists
         if (!error.message.includes('Duplicate key name')) {
-            console.log('Foreign key constraint may already exist');
+            //console.log('Foreign key constraint may already exist');
         }
     }
 
@@ -188,7 +186,6 @@ async function createTables() {
             ALTER TABLE users 
             ADD COLUMN commission_type ENUM('percentage', 'fixed') DEFAULT 'percentage'
         `);
-        console.log('Commission type column added to users table');
     } catch (error) {
         // Ignore if column already exists
         if (!error.message.includes('Duplicate column name')) {
@@ -196,7 +193,6 @@ async function createTables() {
         }
     }
 
-    console.log('Database tables created successfully');
 }
 
 async function createSuperAdmin() {
@@ -221,10 +217,6 @@ async function createSuperAdmin() {
                  Values(?,?,?,?)`,
                  [uuidv4(),'ABC123',adminId,1]
             );
-
-            console.log('Default superadmin created:');
-            console.log('Email: admin@webuzo-saas.com');
-            console.log('Password: admin123');
         }
     } catch (error) {
         console.error('Error creating superadmin:', error);

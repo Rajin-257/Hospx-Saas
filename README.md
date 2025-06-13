@@ -1,4 +1,4 @@
-# Webuzo SaaS Platform
+# Hospx SaaS Platform
 
 A comprehensive Node.js SaaS platform for domain and database management with Webuzo API integration.
 
@@ -35,15 +35,15 @@ A comprehensive Node.js SaaS platform for domain and database management with We
 ## Installation
 
 1. Clone repository and install dependencies:
+
 ```bash
 npm install
 ```
 
 2. Create .env file (copy from config/env.example)
-
 3. Configure database and SMTP settings
-
 4. Start application:
+
 ```bash
 npm start
 ```
@@ -64,7 +64,6 @@ npm start
 ## API Integration
 Uses Webuzo API for:
 - Domain creation/deletion
-- Database management
 - User privilege assignment
 
 ## Project Structure
@@ -72,3 +71,11 @@ Uses Webuzo API for:
 - Middleware for authentication
 - Services for external APIs
 - Professional code organization 
+
+## Database management
+- Initial Sql Upload
+- Single or bulk Database Selection
+- Query Execution
+
+
+For More Info Cheak Crud_Enhancements!-------

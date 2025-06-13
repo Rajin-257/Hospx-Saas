@@ -72,7 +72,7 @@ async function sendEmail(to, subject, htmlBody, textBody = null) {
 
 // Welcome email template
 async function sendWelcomeEmail(userEmail, userName, domainName) {
-    const subject = 'Welcome to Webuzo SaaS Platform!';
+    const subject = 'Welcome to HospX Platform!';
     const htmlBody = `
         <!DOCTYPE html>
         <html>
@@ -90,7 +90,7 @@ async function sendWelcomeEmail(userEmail, userName, domainName) {
         <body>
             <div class="container">
                 <div class="header">
-                    <h1>Welcome to Webuzo SaaS!</h1>
+                    <h1>Welcome to HospX!</h1>
                 </div>
                 <div class="content">
                     <h2>Hello ${userName}!</h2>
@@ -108,7 +108,7 @@ async function sendWelcomeEmail(userEmail, userName, domainName) {
                     <p>If you have any questions, please contact our support team.</p>
                 </div>
                 <div class="footer">
-                    <p>Best regards,<br>Webuzo SaaS Team</p>
+                    <p>Best regards,<br>HospX Team</p>
                 </div>
             </div>
         </body>
@@ -120,7 +120,7 @@ async function sendWelcomeEmail(userEmail, userName, domainName) {
 
 // Credentials email template
 async function sendCredentialsEmail(userEmail, userName, password, referenceCode) {
-    const subject = 'Your Login Credentials - Webuzo SaaS Platform';
+    const subject = 'Your Login Credentials - HospX Platform';
     const htmlBody = `
         <!DOCTYPE html>
         <html>
@@ -159,7 +159,7 @@ async function sendCredentialsEmail(userEmail, userName, password, referenceCode
                     <p><a href="${process.env.APP_URL || 'http://localhost:3000'}/login" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a></p>
                 </div>
                 <div class="footer">
-                    <p>Best regards,<br>Webuzo SaaS Team</p>
+                    <p>Best regards,<br>HospX Team</p>
                 </div>
             </div>
         </body>
@@ -171,7 +171,7 @@ async function sendCredentialsEmail(userEmail, userName, password, referenceCode
 
 // Password reset email template
 async function sendPasswordResetEmail(userEmail, userName, resetToken) {
-    const subject = 'Password Reset Request - Webuzo SaaS Platform';
+    const subject = 'Password Reset Request - HospX Platform';
     const resetUrl = `${process.env.APP_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
     
     const htmlBody = `
@@ -195,7 +195,7 @@ async function sendPasswordResetEmail(userEmail, userName, resetToken) {
                 </div>
                 <div class="content">
                     <h2>Hello ${userName}!</h2>
-                    <p>We received a request to reset your password for your Webuzo SaaS account.</p>
+                    <p>We received a request to reset your password for your HospX account.</p>
                     
                     <p>Click the link below to reset your password:</p>
                     
@@ -206,7 +206,7 @@ async function sendPasswordResetEmail(userEmail, userName, resetToken) {
                     <p>If you didn't request this password reset, please ignore this email or contact support if you have concerns.</p>
                 </div>
                 <div class="footer">
-                    <p>Best regards,<br>Webuzo SaaS Team</p>
+                    <p>Best regards,<br>HospX Team</p>
                 </div>
             </div>
         </body>

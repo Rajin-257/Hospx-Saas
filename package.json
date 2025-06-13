@@ -1,5 +1,5 @@
 {
-  "name": "webuzo-saas-platform",
+  "name": "HospX",
   "version": "1.0.0",
   "description": "A comprehensive SaaS platform for domain and database management with Webuzo API integration",
   "main": "app.js",
@@ -10,7 +10,7 @@
   },
   "keywords": [
     "saas",
-    "webuzo",
+    "HospX",
     "domain",
     "database",
     "payment"
