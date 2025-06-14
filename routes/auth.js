@@ -194,8 +194,9 @@ router.post('/register', isNotAuthenticated, [
             );
 
             // Create database record regardless of domain type
+            const databasePrefix = process.env.DATABASE_PREFIX;
             const database = new Database({
-                database_name: 'edusofto_' + databaseName,
+                database_name: databasePrefix + databaseName,
                 user_id: user.id,
                 domain_id: domainLink,
                 expiry_date: expiryDate,

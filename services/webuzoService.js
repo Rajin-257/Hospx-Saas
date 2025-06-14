@@ -59,7 +59,7 @@ class WebuzoService {
     // Add addon domain
     async addAddonDomain(domainName, domainPath = null) {
         try {
-            const path = 'public_html';
+            const path = process.env.DOMAIN_PATH;
             
             const postData = {
                 add: '1',
@@ -191,10 +191,13 @@ class WebuzoService {
                 'TRIGGER': 'Y'
             };
 
+            const databaseUser = process.env.DATABASE_USER;
+            const databasePrefix = process.env.DATABASE_PREFIX;
+
             const postData = {
                 submitpri: '1',
-                dbname: 'edusofto_' + databaseName,
-                dbuser: 'edusofto_tenant',
+                dbname: databaseUser + databaseName,
+                dbuser: databasePrefix,
                 host: host,
                 pri: privileges
             };
