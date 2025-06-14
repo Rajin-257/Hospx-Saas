@@ -191,13 +191,13 @@ class WebuzoService {
                 'TRIGGER': 'Y'
             };
 
-            const databaseUser = process.env.DATABASE_USER;
+            const databaseUser = process.env.DatabaseUser;
             const databasePrefix = process.env.DATABASE_PREFIX;
 
             const postData = {
                 submitpri: '1',
-                dbname: databaseUser + databaseName,
-                dbuser: databasePrefix,
+                dbname:  databasePrefix + databaseName,
+                dbuser: databaseUser,
                 host: host,
                 pri: privileges
             };

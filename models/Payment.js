@@ -871,7 +871,7 @@ class Payment {
             
             <div class="footer">
                 <div>This is a computer-generated receipt.</div>
-                <div>For support: support@hospx.com</div>
+                <div>For support: support@Hospx.app</div>
                 <div class="print-date">Printed: ${new Date().toLocaleDateString('en-GB')} ${new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</div>
             </div>
         </div>

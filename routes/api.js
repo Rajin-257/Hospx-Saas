@@ -57,7 +57,7 @@ router.post('/validate-domain', async (req, res) => {
 router.post('/validate-subdomain', async (req, res) => {
     try {
         const { subdomain } = req.body;
-        const fullDomain = subdomain + '.hospx.com';
+        const fullDomain = subdomain + '.Hospx.app';
         const existingDomain = await Database.checkDomainExists(fullDomain);
         const exists = !!existingDomain;
         res.json({

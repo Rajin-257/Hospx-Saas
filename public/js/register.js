@@ -8,7 +8,7 @@ $(document).ready(function() {
             $('#custom_domain_input').hide();
             $('#subdomain_name').prop('required', true);
             $('#custom_domain_name').prop('required', false);
-            $('#domain_help_text').text('Choose a subdomain (yourname.hospx.com)');
+            $('#domain_help_text').text('Choose a subdomain (yourname.Hospx.app)');
             updateExpectedDomain();
         } else {
             $('#subdomain_input').hide();
@@ -28,7 +28,7 @@ $(document).ready(function() {
         if (domainType === 'subdomain') {
             const subdomain = $('#subdomain_name').val();
             if (subdomain) {
-                expectedDomain = subdomain + '.hospx.com';
+                expectedDomain = subdomain + '.Hospx.app';
             }
         } else {
             expectedDomain = $('#custom_domain_name').val();

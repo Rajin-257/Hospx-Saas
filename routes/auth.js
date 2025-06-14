@@ -167,8 +167,8 @@ router.post('/register', isNotAuthenticated, [
         const expiryDate = moment().add(15, 'days').format('YYYY-MM-DD');
 
         try {
-            // Check if it's a subdomain (ends with .hospx.com)
-            const isSubdomain = expected_domain.endsWith('.hospx.com');
+            // Check if it's a subdomain (ends with .Hospx.app)
+            const isSubdomain = expected_domain.endsWith('.Hospx.app');
             
             if (!isSubdomain) {
                 // Only call Webuzo API for custom domains, not subdomains

@@ -132,7 +132,7 @@
                                     </span>
                                     <input type="text" class="form-control" id="subdomain_name" name="subdomain_name" 
                                            placeholder="yourname" pattern="[a-zA-Z0-9-]+" required>
-                                    <span class="input-group-text">.hospx.com</span>
+                                    <span class="input-group-text">.Hospx.app</span>
                                     <button type="button" class="btn btn-outline-secondary" id="checkSubdomain">
                                         <i class="fas fa-search"></i>
                                     </button>
@@ -156,7 +156,7 @@
                                 <div class="validation-message"></div>
                                 <div class="form-text">
                                     <small id="domain_help_text">
-                                        Choose a subdomain (yourname.hospx.com) or use your own custom domain
+                                        Choose a subdomain (yourname.Hospx.app) or use your own custom domain
                                     </small>
                                 </div>
                             </div>
@@ -232,7 +232,7 @@
                     $('#custom_domain_input').hide();
                     $('#subdomain_name').prop('required', true);
                     $('#custom_domain_name').prop('required', false);
-                    $('#domain_help_text').text('Choose a subdomain (yourname.hospx.com)');
+                    $('#domain_help_text').text('Choose a subdomain (yourname.Hospx.app)');
                     updateExpectedDomain();
                 } else {
                     $('#subdomain_input').hide();
@@ -252,7 +252,7 @@
                 if (domainType === 'subdomain') {
                     const subdomain = $('#subdomain_name').val();
                     if (subdomain) {
-                        expectedDomain = subdomain + '.hospx.com';
+                        expectedDomain = subdomain + '.Hospx.app';
                     }
                 } else {
                     expectedDomain = $('#custom_domain_name').val();

@@ -688,7 +688,7 @@ router.post('/databases/domain/edit', [
                 req.flash('error_msg', 'Subdomain name is required');
                 return res.redirect('/admin/databases');
             }
-            newDomainName = subdomain_name + '.hospx.com';
+            newDomainName = subdomain_name + '.Hospx.app';
         } else {
             if (!custom_domain_name) {
                 req.flash('error_msg', 'Custom domain name is required');
