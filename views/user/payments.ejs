@@ -1,6 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <%- include('../partials/head') %>
+<style>
+    .navbar-custom {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .card {
+        border: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .table th {
+        background-color: #f8f9fa;
+        border-top: none;
+    }
+    .stats-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 10px;
+        padding: 1.5rem;
+    }
+</style>
 <body>
     <%- include('../partials/navbar-user', { currentPage: 'payments' }) %>
 
@@ -28,9 +46,9 @@
                         <h2><i class="fas fa-credit-card me-2"></i>My Payments</h2>
                         <p class="text-muted">View your payment history and transaction details</p>
                     </div>
-                    <a href="/payment/create" class="btn btn-primary">
+                    <!-- <a href="/payment/create" class="btn btn-primary">
                         <i class="fas fa-plus me-2"></i>Make Payment
-                    </a>
+                    </a> -->
                 </div>
             </div>
         </div>
@@ -167,7 +185,7 @@
                                             <tr>
                                                 <td>
                                                     <div class="fw-semibold">#<%= payment.transaction_id %></div>
-                                                    <small class="text-muted"><%= payment.id.substring(0, 8) %>...</small>
+                                                    <!-- <small class="text-muted"><%= payment.id.substring(0, 8) %>...</small> -->
                                                 </td>
                                                 <td>
                                                     <span class="fw-bold"><%= payment.amount %> <%= payment.currency %></span>
@@ -217,11 +235,11 @@
                                 <i class="fas fa-credit-card fa-3x text-muted mb-3"></i>
                                 <h5 class="text-muted">No Payments Found</h5>
                                 <p class="text-muted">You haven't made any payments yet. Start by making your first payment for a subscription.</p>
-                                <div class="mt-3">
+                                <!-- <div class="mt-3">
                                     <a href="/payment/create" class="btn btn-primary">
                                         <i class="fas fa-plus me-2"></i>Make First Payment
                                     </a>
-                                </div>
+                                </div> -->
                             </div>
                         <% } %>
                     </div>
@@ -252,5 +270,99 @@
         </div>
     </div>
 
-    <%- include('../partials/scripts') %></body>
+    <%- include('../partials/scripts') %>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Payment Details Modal
+            const paymentDetailsModal = new bootstrap.Modal(document.getElementById('paymentDetailsModal'));
+            
+            document.querySelectorAll('.payment-details-btn').forEach(button => {
+                button.addEventListener('click', async function() {
+                    const paymentId = this.getAttribute('data-payment-id');
+                    const modalContent = document.getElementById('paymentDetailsContent');
+                    
+                    try {
+                        const response = await fetch(`/user/api/payments/${paymentId}/details`);
+                        const data = await response.json();
+                        
+                        if (data.success) {
+                            modalContent.innerHTML = `
+                                <div class="payment-details">
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <strong>Transaction ID:</strong>
+                                            <p>${data.payment.transaction_id}</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>Amount:</strong>
+                                            <p>${data.payment.amount} ${data.payment.currency}</p>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <strong>Payment Method:</strong>
+                                            <p>${data.payment.payment_method.toUpperCase()}</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>Status:</strong>
+                                            <p><span class="badge ${data.payment.status === 'completed' ? 'bg-success' : 
+                                                                   data.payment.status === 'pending' ? 'bg-warning' : 
+                                                                   data.payment.status === 'failed' ? 'bg-danger' : 'bg-secondary'}">
+                                                ${data.payment.status.toUpperCase()}
+                                            </span></p>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <strong>Date:</strong>
+                                            <p>${new Date(data.payment.created_at).toLocaleString()}</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>Type:</strong>
+                                            <p>${data.payment.payment_type || 'subscription'}</p>
+                                        </div>
+                                    </div>
+                                    ${data.payment.reference_data ? `
+                                        <div class="row mb-3">
+                                            <div class="col-md-6">
+                                                <strong>Database:</strong>
+                                                <p>${data.payment.database_name || data.payment.reference_data.database_name || 'N/A'}</p>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <strong>Domain:</strong>
+                                                <p>${data.payment.domain_name || data.payment.reference_data.domain_name || 'N/A'}</p>
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `;
+                        } else {
+                            modalContent.innerHTML = `
+                                <div class="alert alert-danger">
+                                    ${data.message || 'Failed to load payment details'}
+                                </div>
+                            `;
+                        }
+                    } catch (error) {
+                        modalContent.innerHTML = `
+                            <div class="alert alert-danger">
+                                An error occurred while loading payment details
+                            </div>
+                        `;
+                    }
+                    
+                    paymentDetailsModal.show();
+                });
+            });
+
+            // Auto-submit form when filters change
+            document.querySelectorAll('#status, #payment_type').forEach(select => {
+                select.addEventListener('change', function() {
+                    this.form.submit();
+                });
+            });
+        });
+    </script>
+</body>
 </html> 

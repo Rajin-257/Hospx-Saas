@@ -170,18 +170,38 @@ router.post('/create', [
 
         console.log('Creating payment with payment_type:', payment_type);
 
-        // Verify database belongs to user
+        // Verify database belongs to user OR user is making payment for their referral
         const database = await Database.findById(database_id);
-        if (!database || database.user_id !== req.session.user.id) {
+        if (!database) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Database not found' 
+            });
+        }
+
+        // Check if user owns the database OR if the database owner was referred by this user
+        const isOwner = database.user_id === req.session.user.id;
+        let isReferralPayment = false;
+        
+        if (!isOwner) {
+            // Check if the database owner was referred by the current user
+            const User = require('../models/User');
+            const databaseOwner = await User.findById(database.user_id);
+            if (databaseOwner && databaseOwner.referred_by === req.session.user.id) {
+                isReferralPayment = true;
+            }
+        }
+
+        if (!isOwner && !isReferralPayment) {
             return res.status(403).json({ 
                 success: false, 
-                message: 'Access denied: Database not found or not owned by user' 
+                message: 'Access denied: You can only make payments for your own databases or databases of users you referred' 
             });
         }
 
         // Create payment record
         const payment = new Payment({
-            user_id: req.session.user.id,
+            user_id: req.session.user.id, // The person making the payment
             amount: parseFloat(amount),
             payment_method,
             transaction_id,
@@ -190,10 +210,13 @@ router.post('/create', [
             reference_data: {
                 database_id,
                 database_name: database.database_name,
+                database_owner_id: database.user_id, // The actual owner of the database
                 phone_number,
                 period,
                 period_type,
-                reference_code: reference_code || null
+                reference_code: reference_code || null,
+                is_referral_payment: isReferralPayment, // Flag to indicate this is a referral payment
+                paid_by_referrer: isReferralPayment ? req.session.user.id : null
             }
         });
 

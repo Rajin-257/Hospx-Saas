@@ -1,6 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <%- include('../partials/head') %>
+<style>
+    .navbar-custom {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .stats-card {
+        transition: transform 0.2s;
+        border: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .stats-card:hover {
+        transform: translateY(-2px);
+    }
+    .card {
+        border: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+</style>
 <body>
     <%- include('../partials/navbar-user', { currentPage: 'dashboard' }) %>
     <%- include('../partials/flash-messages') %>

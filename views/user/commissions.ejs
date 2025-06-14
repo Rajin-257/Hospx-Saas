@@ -1,6 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <%- include('../partials/head') %>
+<style>
+    .navbar-custom {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .card {
+        border: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .table th {
+        background-color: #f8f9fa;
+        border-top: none;
+    }
+    .stats-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 10px;
+        padding: 1.5rem;
+    }
+</style>
 <body>
     <%- include('../partials/navbar-user', { currentPage: 'commissions' }) %>
 
@@ -228,5 +246,34 @@
         </div>
     </div>
 
-    <%- include('../partials/scripts') %></body>
+    <%- include('../partials/scripts') %>
+    
+    <script>
+        function copyReferenceCode() {
+            const referenceCode = '<%= user.reference_code %>';
+            if (referenceCode && referenceCode !== 'null') {
+                navigator.clipboard.writeText(referenceCode).then(function() {
+                    // Show success message
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-success alert-dismissible fade show';
+                    alert.innerHTML = `
+                        Reference code copied to clipboard!
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    document.body.insertBefore(alert, document.body.firstChild);
+                    
+                    // Auto dismiss after 3 seconds
+                    setTimeout(() => {
+                        if (alert.parentNode) {
+                            alert.remove();
+                        }
+                    }, 3000);
+                }).catch(function(err) {
+                    console.error('Could not copy text: ', err);
+                    alert('Failed to copy reference code');
+                });
+            }
+        }
+    </script>
+</body>
 </html> 

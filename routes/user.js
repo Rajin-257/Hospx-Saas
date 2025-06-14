@@ -5,7 +5,9 @@ const router = express.Router();
 const Database = require('../models/Database');
 const Payment = require('../models/Payment');
 const Commission = require('../models/Commission');
+const User = require('../models/User');
 const { requireAuth, isExecutive } = require('../middleware/auth');
+const db = require('../config/database');
 
 // Apply middleware to all routes
 router.use(requireAuth);
@@ -157,6 +159,20 @@ router.get('/payments', async (req, res) => {
     }
 });
 
+// Get payment details (API endpoint)
+router.get('/api/payments/:id/details', async (req, res) => {
+    try {
+        const payment = await Payment.findById(req.params.id);
+        if (!payment || payment.user_id !== req.session.user.id) {
+            return res.status(404).json({ success: false, message: 'Payment not found' });
+        }
+        res.json({ success: true, payment });
+    } catch (error) {
+        console.error('Get payment details error:', error);
+        res.status(500).json({ success: false, message: 'Error loading payment details' });
+    }
+});
+
 // Update last accessed for database
 router.post('/databases/:id/access', async (req, res) => {
     try {
@@ -210,6 +226,55 @@ router.post('/databases/:id/renew', async (req, res) => {
             success: false, 
             error: 'Internal server error while renewing database'
         });
+    }
+});
+
+// Get referrals page
+router.get('/referrals', async (req, res) => {
+    try {
+        // Get fresh user data
+        const user = await User.findById(req.session.user.id);
+        if (!user) {
+            req.flash('error_msg', 'User not found');
+            return res.redirect('/login');
+        }
+
+        // Get all users referred by this user
+        const query = `
+            SELECT 
+                u.id,
+                u.full_name,
+                u.email,
+                u.phone,
+                u.created_at,
+                db.id as database_id,
+                dom.domain_name,
+                db.database_name,
+                dom.status as domain_status,
+                db.expiry_date,
+                db.last_accessed
+            FROM users u
+            LEFT JOIN \`databases\` db ON u.id = db.user_id
+            LEFT JOIN domains dom ON db.domain_id = dom.id
+            WHERE u.referred_by = ?
+            ORDER BY u.created_at DESC
+        `;
+        
+        const referredUsers = await db.executeQuery(query, [user.id]);
+
+        // Get commission statistics
+        const commissionStats = await Commission.getUserStats(user.id);
+
+        res.render('user/referrals', {
+            title: 'My Referrals',
+            referredUsers,
+            commissionStats,
+            user: user
+        });
+    } catch (error) {
+        console.error('Referrals page error:', error);
+        req.flash('error_msg', 'Error loading referrals');
+        res.redirect('/user/dashboard');
     }
 });
 

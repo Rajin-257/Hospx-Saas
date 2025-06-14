@@ -77,7 +77,15 @@ class Payment {
 
     static async findById(id) {
         try {
-            const query = 'SELECT * FROM payments WHERE id = ?';
+            const query = `
+                SELECT p.*, 
+                       d.database_name,
+                       dom.domain_name
+                FROM payments p
+                LEFT JOIN \`databases\` d ON JSON_UNQUOTE(JSON_EXTRACT(p.reference_data, '$.database_id')) = d.id
+                LEFT JOIN domains dom ON d.domain_id = dom.id
+                WHERE p.id = ?
+            `;
             const results = await db.executeQuery(query, [id]);
             
             if (results.length > 0) {
@@ -85,6 +93,9 @@ class Payment {
                 if (payment.reference_data && typeof payment.reference_data === 'string') {
                     payment.reference_data = JSON.parse(payment.reference_data);
                 }
+                // Add domain and database information
+                payment.domain_name = results[0].domain_name;
+                payment.database_name = results[0].database_name;
                 return payment;
             }
             return null;
@@ -269,20 +280,137 @@ class Payment {
 
     static async processCommission(paymentId) {
         try {
+            if (!paymentId) {
+                console.error('Payment ID is required for commission processing');
+                return { success: false, error: 'Payment ID is required' };
+            }
+
             const payment = await this.findById(paymentId);
-            if (!payment) return;
+            if (!payment) {
+                console.error('Payment not found for commission processing:', paymentId);
+                return { success: false, error: 'Payment not found' };
+            }
 
-            // Get user details to check if they were referred
-            const userQuery = 'SELECT referred_by FROM users WHERE id = ?';
-            const [userResult] = await db.executeQuery(userQuery, [payment.user_id]);
-            console.log('userResult', userResult);
+            // Only process commissions for completed payments
+            if (payment.status !== 'completed') {
+                console.log('Payment not completed, skipping commission processing:', paymentId);
+                return { success: true, message: 'Payment not completed' };
+            }
 
-            if (userResult && userResult.referred_by) {
+            // NEW LOGIC: Find database owner from payment reference_data
+            let databaseOwnerId = null;
+            let databaseInfo = null;
+
+            // First, try to get database owner from reference_data
+            if (payment.reference_data && payment.reference_data.database_id) {
+                const Database = require('./Database');
+                const database = await Database.findById(payment.reference_data.database_id);
+                
+                if (database) {
+                    databaseOwnerId = database.user_id;
+                    databaseInfo = {
+                        database_id: database.id,
+                        database_name: database.database_name,
+                        owner_id: database.user_id
+                    };
+                    console.log('Found database owner from database lookup:', {
+                        databaseId: database.id,
+                        databaseName: database.database_name,
+                        ownerId: database.user_id
+                    });
+                } else {
+                    console.log('Database not found with ID:', payment.reference_data.database_id);
+                }
+            }
+
+            // Fallback: Check if database_owner_id is directly in reference_data
+            if (!databaseOwnerId && payment.reference_data && payment.reference_data.database_owner_id) {
+                databaseOwnerId = payment.reference_data.database_owner_id;
+                console.log('Using database owner from reference_data:', databaseOwnerId);
+            }
+
+            // Final fallback: Use payment user_id (original logic)
+            if (!databaseOwnerId) {
+                databaseOwnerId = payment.user_id;
+                console.log('Fallback to payment user as database owner:', databaseOwnerId);
+            }
+
+            // Get database owner details to check if they were referred
+            const ownerQuery = 'SELECT id, referred_by, full_name, email FROM users WHERE id = ?';
+            const ownerResults = await db.executeQuery(ownerQuery, [databaseOwnerId]);
+            
+            if (ownerResults.length === 0) {
+                console.error('Database owner not found:', databaseOwnerId);
+                return { success: false, error: 'Database owner not found' };
+            }
+
+            const databaseOwner = ownerResults[0];
+            console.log('Processing commission for database owner:', {
+                ownerId: databaseOwner.id,
+                ownerName: databaseOwner.full_name,
+                referredBy: databaseOwner.referred_by,
+                paymentId: paymentId,
+                amount: payment.amount,
+                paymentMadeBy: payment.user_id
+            });
+
+            if (databaseOwner.referred_by) {
+                // Verify the referrer exists
+                const referrerQuery = 'SELECT id, full_name, email FROM users WHERE id = ?';
+                const referrerResults = await db.executeQuery(referrerQuery, [databaseOwner.referred_by]);
+                
+                if (referrerResults.length === 0) {
+                    console.error('Referrer not found:', databaseOwner.referred_by);
+                    return { success: false, error: 'Referrer not found' };
+                }
+
+                const referrer = referrerResults[0];
+                console.log('Creating commission for referrer:', {
+                    referrerId: referrer.id,
+                    referrerName: referrer.full_name,
+                    databaseOwnerId: databaseOwner.id,
+                    databaseOwnerName: databaseOwner.full_name,
+                    paymentAmount: payment.amount
+                });
+
                 const Commission = require('./Commission');
-                await Commission.createCommission(userResult.referred_by, payment.user_id, paymentId, payment.amount);
+                const commissionResult = await Commission.createCommission(
+                    databaseOwner.referred_by,  // Commission goes to database owner's referrer
+                    databaseOwner.id,           // Commission is for referring this database owner
+                    paymentId, 
+                    payment.amount
+                );
+
+                if (commissionResult.success) {
+                    console.log('Commission created successfully:', commissionResult.message);
+                    return { 
+                        success: true, 
+                        commission: commissionResult.commission,
+                        message: commissionResult.message,
+                        details: {
+                            referrer: referrer.full_name,
+                            databaseOwner: databaseOwner.full_name,
+                            databaseInfo: databaseInfo
+                        }
+                    };
+                } else {
+                    console.error('Failed to create commission:', commissionResult.error);
+                    return { success: false, error: commissionResult.error };
+                }
+            } else {
+                console.log('Database owner was not referred by anyone, no commission to process');
+                return { 
+                    success: true, 
+                    message: 'Database owner was not referred',
+                    details: {
+                        databaseOwner: databaseOwner.full_name,
+                        databaseInfo: databaseInfo
+                    }
+                };
             }
         } catch (error) {
             console.error('Payment processCommission error:', error);
+            return { success: false, error: error.message };
         }
     }
 
@@ -343,18 +471,23 @@ class Payment {
                 WHERE status = 'completed' 
                 AND YEAR(created_at) = YEAR(CURDATE()) 
                 AND MONTH(created_at) = MONTH(CURDATE())
+                ${filters.user_id ? 'AND user_id = ?' : ''}
             `;
-            const [monthlyResult] = await db.executeQuery(monthlyQuery);
+            const monthlyParams = filters.user_id ? [filters.user_id] : [];
+            const [monthlyResult] = await db.executeQuery(monthlyQuery, monthlyParams);
 
-            // Payment methods breakdown
-            const methodsQuery = `
-                SELECT payment_method as method, COUNT(*) as count
-                FROM payments 
-                WHERE status = 'completed'${whereClause}
-                GROUP BY payment_method
-                ORDER BY count DESC
-            `;
-            const methodsResult = await db.executeQuery(methodsQuery, params);
+            // Payment methods breakdown (only if user_id is provided)
+            let paymentMethods = [];
+            if (filters.user_id) {
+                const methodsQuery = `
+                    SELECT payment_method as method, COUNT(*) as count
+                    FROM payments 
+                    WHERE status = 'completed' AND user_id = ?
+                    GROUP BY payment_method
+                    ORDER BY count DESC
+                `;
+                paymentMethods = await db.executeQuery(methodsQuery, [filters.user_id]);
+            }
 
             return {
                 total_payments: totalResult.count,
@@ -362,7 +495,7 @@ class Payment {
                 total_revenue: parseFloat(revenueResult.total) || 0,
                 pending_payments: pendingResult.count,
                 monthly_revenue: parseFloat(monthlyResult.total) || 0,
-                payment_methods: methodsResult
+                payment_methods: paymentMethods
             };
         } catch (error) {
             console.error('Payment getStats error:', error);
@@ -371,7 +504,8 @@ class Payment {
                 completed_payments: 0,
                 total_revenue: 0,
                 pending_payments: 0,
-                monthly_revenue: 0
+                monthly_revenue: 0,
+                payment_methods: []
             };
         }
     }
@@ -524,8 +658,9 @@ class Payment {
                 }
             }
 
-            // Process commission if applicable
-            await this.processCommission(paymentId);
+            // Process commission using the new database owner-based logic
+            // This will automatically handle both regular and referral payments correctly
+            const commissionResult = await this.processCommission(paymentId);
             
             return { success: true, message: 'Payment approved and database renewed successfully' };
         } catch (error) {

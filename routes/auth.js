@@ -10,6 +10,7 @@ const fs = require('fs');
 
 
 
+
 // Import models and services
 const User = require('../models/User');
 const Database = require('../models/Database');
@@ -194,9 +195,8 @@ router.post('/register', isNotAuthenticated, [
             );
 
             // Create database record regardless of domain type
-            const databasePrefix = process.env.DATABASE_PREFIX;
             const database = new Database({
-                database_name: databasePrefix + databaseName,
+                database_name: process.env.DATABASE_PREFIX + databaseName,
                 user_id: user.id,
                 domain_id: domainLink,
                 expiry_date: expiryDate,
@@ -206,13 +206,23 @@ router.post('/register', isNotAuthenticated, [
             await database.save();
 
 
-            const connection = mysql.createConnection({
-                host: process.env.DB_HOST,
-                user: process.env.DB_USER,
-                password: process.env.DB_PASSWORD,
-                database: 'testing_saas_sql',
-                multipleStatements: true  // Enable multiple statements
-            });
+            const connection = mysql.createConnection(
+                process.env.APP_ENV === 'production' 
+                ? {
+                    host: process.env.DB_HOST,
+                    user: process.env.DB_USER,
+                    password: process.env.DB_PASSWORD,
+                    database: process.env.DATABASE_PREFIX + databaseName,
+                    multipleStatements: true
+                }
+                : {
+                    host: process.env.DB_HOST,
+                    user: process.env.DB_USER,
+                    password: process.env.DB_PASSWORD,
+                    database: 'test_db',
+                    multipleStatements: true
+                }
+            );
 
             const sql = fs.readFileSync('uploads/dbcreate.sql', 'utf8');
             connection.query(sql, (err, results) => {
@@ -233,8 +243,8 @@ router.post('/register', isNotAuthenticated, [
         // Send welcome email
         await emailService.sendWelcomeEmail(email, full_name, expected_domain);
 
-        req.flash('success_msg', 'Registration successful! You will receive login credentials once your account is approved by an administrator.');
-        res.redirect('/login');
+        req.flash('success_msg', 'Registration successful! You will receive your login credentials And Website link in Your Email.');
+        res.redirect('/register');
 
     } catch (error) {
         console.error('Registration error:', error);

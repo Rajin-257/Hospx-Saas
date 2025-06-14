@@ -98,9 +98,10 @@ async function sendWelcomeEmail(userEmail, userName, domainName) {
                     
                     <div class="domain-info">
                         <h3>Your Domain Details:</h3>
-                        <p><strong>Domain:</strong> ${domainName}</p>
-                        <p><strong>Database:</strong> A database has been created with 15 days validity</p>
-                        <p><strong>Status:</strong> Active</p>
+                        <p><strong>Website:</strong> ${domainName}</p>
+                        <p><strong>username:</strong> admin</p>
+                        <p><strong>password:</strong> 123</p>
+                        <p><strong>Expiary:</strong> 15 days</p>
                     </div>
                     
                     <p>Your account is currently pending approval. Once an administrator assigns you a role, you will receive login credentials via email.</p>

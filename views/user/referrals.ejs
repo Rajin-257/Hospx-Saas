@@ -13,6 +13,14 @@
         background-color: #f8f9fa;
         border-top: none;
     }
+    .stats-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 10px;
+    }
+    .domain-badge {
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+    }
     .credential-card {
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
         border-radius: 10px;
@@ -37,7 +45,7 @@
     }
 </style>
 <body>
-    <%- include('../partials/navbar-user', { currentPage: 'databases' }) %>
+    <%- include('../partials/navbar-user', { currentPage: 'referrals' }) %>
 
     <!-- Flash Messages -->
     <% if (typeof success_msg !== 'undefined' && success_msg.length > 0) { %>
@@ -60,45 +68,115 @@
             <div class="col-12">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
-                        <h2><i class="fas fa-database me-2"></i>My Databases</h2>
-                        <p class="text-muted">Manage your databases and access credentials</p>
+                        <h2><i class="fas fa-user-plus me-2"></i>My Referrals</h2>
+                        <p class="text-muted">Track your referrals and their domains</p>
                     </div>
-                    <div class="badge bg-info fs-6">
-                        <i class="fas fa-database me-1"></i><%= databases.length %> Database(s)
+                    <% if (user.reference_code) { %>
+                        <div class="card">
+                            <div class="card-body text-center py-2">
+                                <small class="text-muted">Your Reference Code</small>
+                                <h5 class="mb-0 text-primary"><%= user.reference_code %></h5>
+                            </div>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div class="row g-4 mb-4">
+            <div class="col-xl-3 col-md-6">
+                <div class="card">
+                    <div class="card-body stats-card">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-primary"><%= referredUsers.length %></h4>
+                                <p class="mb-0">Total Referrals</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-users fa-2x text-primary"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card">
+                    <div class="card-body stats-card">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-success">৳<%= commissionStats.total_earned || 0 %></h4>
+                                <p class="mb-0">Total Earnings</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-money-bill-wave fa-2x text-success"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card">
+                    <div class="card-body stats-card">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-warning">৳<%= commissionStats.pending_earnings || 0 %></h4>
+                                <p class="mb-0">Pending Earnings</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-clock fa-2x text-warning"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card">
+                    <div class="card-body stats-card">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0 text-info"><%= commissionStats.total_commissions || 0 %></h4>
+                                <p class="mb-0">Total Commissions</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-handshake fa-2x text-info"></i>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Databases List -->
+        <!-- Referrals List -->
         <div class="row">
             <div class="col-12">
                 <div class="card">
                     <div class="card-body">
-                        <% if (databases && databases.length > 0) { %>
+                        <% if (referredUsers && referredUsers.length > 0) { %>
                             <div class="table-responsive">
                                 <table class="table table-hover">
                                     <thead>
                                         <tr>
-                                            <th>Database Name</th>
+                                            <th>User</th>
                                             <th>Domain</th>
                                             <th>Status</th>
                                             <th>Expiry Date</th>
                                             <th>Last Accessed</th>
+                                            <th>Joined Date</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <% databases.forEach(database => { %>
+                                        <% referredUsers.forEach(referredUser => { %>
                                             <tr>
                                                 <td>
-                                                    <div class="fw-semibold"><%= database.database_name %></div>
-                                                    <small class="text-muted">Created: <%= new Date(database.created_at).toLocaleDateString() %></small>
+                                                    <div class="fw-semibold"><%= referredUser.full_name %> | <%= referredUser.phone %></div>
+                                                    <small class="text-muted"><%= referredUser.email %></small>
                                                 </td>
                                                 <td>
-                                                    <% if (database.domain_name) { %>
-                                                        <a href="http://<%= database.domain_name %>" target="_blank" class="text-decoration-none">
-                                                            <%= database.domain_name %>
+                                                    <% if (referredUser.domain_name) { %>
+                                                        <a href="http://<%= referredUser.domain_name %>" target="_blank" class="text-decoration-none">
+                                                            <%= referredUser.domain_name %>
                                                             <i class="fas fa-external-link-alt ms-1"></i>
                                                         </a>
                                                     <% } else { %>
@@ -106,100 +184,126 @@
                                                     <% } %>
                                                 </td>
                                                 <td>
-                                                    <span class="badge <%= database.status === 'active' ? 'bg-success' : 
-                                                                           database.status === 'expired' ? 'bg-danger' : 'bg-secondary' %>">
-                                                        <%= database.status.toUpperCase() %>
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <div>
-                                                        <%= new Date(database.expiry_date).toLocaleDateString() %>
-                                                    </div>
-                                                    <% const now = new Date(); %>
-                                                    <% const expiryDate = new Date(database.expiry_date); %>
-                                                    <% const daysLeft = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24)); %>
-                                                    <% if (daysLeft <= 0) { %>
-                                                        <span class="badge bg-danger">EXPIRED</span>
-                                                    <% } else if (daysLeft <= 3) { %>
-                                                        <span class="badge bg-danger"><%= daysLeft %> days left</span>
-                                                    <% } else if (daysLeft <= 7) { %>
-                                                        <span class="badge bg-warning"><%= daysLeft %> days left</span>
+                                                    <% if (referredUser.domain_status) { %>
+                                                        <span class="badge <%= referredUser.domain_status === 'active' ? 'bg-success' : 
+                                                                           referredUser.domain_status === 'expired' ? 'bg-danger' : 'bg-secondary' %>">
+                                                            <%= referredUser.domain_status.toUpperCase() %>
+                                                        </span>
                                                     <% } else { %>
-                                                        <span class="badge bg-success"><%= daysLeft %> days left</span>
+                                                        <span class="badge bg-secondary">NO DOMAIN</span>
                                                     <% } %>
                                                 </td>
                                                 <td>
-                                                    <% if (database.last_accessed) { %>
-                                                        <%= new Date(database.last_accessed).toLocaleDateString() %>
+                                                    <% if (referredUser.expiry_date) { %>
+                                                        <div>
+                                                            <%= new Date(referredUser.expiry_date).toLocaleDateString() %>
+                                                        </div>
+                                                        <% const now = new Date(); %>
+                                                        <% const expiryDate = new Date(referredUser.expiry_date); %>
+                                                        <% const daysLeft = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24)); %>
+                                                        <% if (daysLeft <= 0) { %>
+                                                            <span class="badge bg-danger">EXPIRED</span>
+                                                        <% } else if (daysLeft <= 3) { %>
+                                                            <span class="badge bg-danger"><%= daysLeft %> days left</span>
+                                                        <% } else if (daysLeft <= 7) { %>
+                                                            <span class="badge bg-warning"><%= daysLeft %> days left</span>
+                                                        <% } else { %>
+                                                            <span class="badge bg-success"><%= daysLeft %> days left</span>
+                                                        <% } %>
+                                                    <% } else { %>
+                                                        <span class="text-muted">N/A</span>
+                                                    <% } %>
+                                                </td>
+                                                <td>
+                                                    <% if (referredUser.last_accessed) { %>
+                                                        <%= new Date(referredUser.last_accessed).toLocaleDateString() %>
                                                     <% } else { %>
                                                         <span class="text-muted">Never</span>
                                                     <% } %>
                                                 </td>
                                                 <td>
-                                                    <div class="btn-group" role="group">
-                                                        <button class="btn btn-sm btn-primary show-credentials-btn" 
-                                                                data-db-id="<%= database.id %>" title="Add Payment">
-                                                            <i class="fas fa-credit-card"></i>
-                                                        </button>
-                                                    </div>
+                                                    <%= new Date(referredUser.created_at).toLocaleDateString() %>
+                                                </td>
+                                                <td>
+                                                    <% if (referredUser.database_id) { %>
+                                                        <div class="btn-group" role="group">
+                                                            <button class="btn btn-sm btn-primary show-credentials-btn" 
+                                                                    data-db-id="<%= referredUser.database_id %>" title="Manage Payment">
+                                                                <i class="fas fa-credit-card"></i>
+                                                            </button>
+                                                        </div>
+                                                    <% } else { %>
+                                                        <span class="text-muted">No domain</span>
+                                                    <% } %>
                                                 </td>
                                             </tr>
                                             <!-- Credentials Row (Hidden by default) -->
-                                            <tr id="credentials-<%= database.id %>" class="credentials-row" style="display: none;">
-                                                <td colspan="6">
-                                                    <div class="credential-card">
-                                                        
-                                                        <!-- Renewal Section -->
-                                                        <div class="mt-4 p-3 bg-light rounded">
-                                                            <div class="d-flex justify-content-between align-items-center">
-                                                                <div>
-                                                                    <h6 class="mb-1"><i class="fas fa-calendar-alt me-2"></i>Database Renewal</h6>
-                                                                    <p class="text-muted mb-0">Extend your database expiry date</p>
-                                                                </div>
-                                                                <% if (daysLeft <= 7 && database.status === 'active') { %>
-                                                                    <button class="btn btn-warning btn-sm make-payment-btn" 
-                                                                            data-db-id="<%= database.id %>"
-                                                                            data-db-name="<%= database.database_name %>"
-                                                                            data-payment-type="renewal">
-                                                                        <i class="fas fa-credit-card me-1"></i>Renew Now
-                                                                    </button>
-                                                                <% } else if (database.status === 'expired') { %>
-                                                                    <button class="btn btn-danger btn-sm make-payment-btn" 
-                                                                            data-db-id="<%= database.id %>"
-                                                                            data-db-name="<%= database.database_name %>"
-                                                                            data-payment-type="renewal">
-                                                                        <i class="fas fa-credit-card me-1"></i>Renew Database
-                                                                    </button>
-                                                                <% } else { %>
-                                                                    <div class="d-flex align-items-center gap-2">
-                                                                        <span class="badge bg-success">Active until <%= expiryDate.toLocaleDateString() %></span>
-                                                                        <button class="btn btn-outline-primary btn-sm make-payment-btn" 
-                                                                                data-db-id="<%= database.id %>"
-                                                                                data-db-name="<%= database.database_name %>"
-                                                                                data-payment-type="extend">
-                                                                            <i class="fas fa-plus me-1"></i>Extend
-                                                                        </button>
+                                            <% if (referredUser.database_id) { %>
+                                                <tr id="credentials-<%= referredUser.database_id %>" class="credentials-row" style="display: none;">
+                                                    <td colspan="7">
+                                                        <div class="credential-card">
+                                                            <!-- Renewal Section -->
+                                                            <div class="mt-4 p-3 bg-light rounded">
+                                                                <div class="d-flex justify-content-between align-items-center">
+                                                                    <div>
+                                                                        <h6 class="mb-1"><i class="fas fa-calendar-alt me-2"></i>Domain Renewal for <%= referredUser.full_name %></h6>
+                                                                        <p class="text-muted mb-0">Extend domain expiry date for your referral</p>
                                                                     </div>
-                                                                <% } %>
+                                                                    <% if (referredUser.expiry_date) { %>
+                                                                        <% const now = new Date(); %>
+                                                                        <% const expiryDate = new Date(referredUser.expiry_date); %>
+                                                                        <% const daysLeft = Math.ceil((expiryDate - now) / (1000 * 60 * 60 * 24)); %>
+                                                                        <% if (daysLeft <= 7 && referredUser.domain_status === 'active') { %>
+                                                                            <button class="btn btn-warning btn-sm make-payment-btn" 
+                                                                                    data-db-id="<%= referredUser.database_id %>"
+                                                                                    data-db-name="<%= referredUser.database_name %>"
+                                                                                    data-payment-type="renewal">
+                                                                                <i class="fas fa-credit-card me-1"></i>Renew Now
+                                                                            </button>
+                                                                        <% } else if (referredUser.domain_status === 'expired') { %>
+                                                                            <button class="btn btn-danger btn-sm make-payment-btn" 
+                                                                                    data-db-id="<%= referredUser.database_id %>"
+                                                                                    data-db-name="<%= referredUser.database_name %>"
+                                                                                    data-payment-type="renewal">
+                                                                                <i class="fas fa-credit-card me-1"></i>Renew Domain
+                                                                            </button>
+                                                                        <% } else { %>
+                                                                            <div class="d-flex align-items-center gap-2">
+                                                                                <span class="badge bg-success">Active until <%= expiryDate.toLocaleDateString() %></span>
+                                                                                <button class="btn btn-outline-primary btn-sm make-payment-btn" 
+                                                                                        data-db-id="<%= referredUser.database_id %>"
+                                                                                        data-db-name="<%= referredUser.database_name %>"
+                                                                                        data-payment-type="extend">
+                                                                                    <i class="fas fa-plus me-1"></i>Extend
+                                                                                </button>
+                                                                            </div>
+                                                                        <% } %>
+                                                                    <% } %>
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                        
-                                                        <!-- <div class="alert alert-warning mt-3 mb-0">
-                                                            <i class="fas fa-exclamation-triangle me-2"></i>
-                                                            <strong>Important:</strong> Keep these credentials secure. Use them to connect your application to the database.
-                                                        </div> -->
-                                                    </div>
-                                                </td>
-                                            </tr>
+                                                    </td>
+                                                </tr>
+                                            <% } %>
                                         <% }); %>
                                     </tbody>
                                 </table>
                             </div>
                         <% } else { %>
                             <div class="text-center py-5">
-                                <i class="fas fa-database fa-3x text-muted mb-3"></i>
-                                <h5 class="text-muted">No Databases Found</h5>
-                                <p class="text-muted">You don't have any databases yet. Contact support to get started.</p>
+                                <i class="fas fa-user-plus fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">No Referrals Yet</h5>
+                                <p class="text-muted">Share your reference code to start earning commissions!</p>
+                                <% if (user.reference_code) { %>
+                                    <div class="mt-3">
+                                        <div class="input-group">
+                                            <input type="text" class="form-control" value="<%= user.reference_code %>" readonly>
+                                            <button class="btn btn-primary" onclick="copyReferenceCode()">
+                                                <i class="fas fa-copy me-1"></i>Copy
+                                            </button>
+                                        </div>
+                                    </div>
+                                <% } %>
                             </div>
                         <% } %>
                     </div>
@@ -214,7 +318,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        <i class="fas fa-credit-card me-2"></i>Database Renewal Payment
+                        <i class="fas fa-credit-card me-2"></i>Domain Renewal Payment
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
@@ -226,18 +330,7 @@
                             <strong>Database:</strong> <span id="modalDbName"></span>
                         </div>
 
-                        <!-- Commission Info -->
-                        <% if (user.referred_by) { %>
-                            <div class="alert alert-success">
-                                <i class="fas fa-handshake me-2"></i>
-                                <strong>Commission Info:</strong> A commission will be paid to your referrer (<strong><%= user.referred_by %></strong>) when this payment is approved.
-                            </div>
-                        <% } else { %>
-                            <div class="alert alert-secondary">
-                                <i class="fas fa-info-circle me-2"></i>
-                                <strong>No Referrer:</strong> You were not referred by anyone, so no commission will be paid.
-                            </div>
-                        <% } %>
+                        
 
                         <!-- Period Selection -->
                         <div class="mb-4">
@@ -341,19 +434,11 @@
                             <div class="mb-3">
                                 <label for="referenceCode" class="form-label">Reference Code</label>
                                 <% if (user.referred_by) { %>
-                                    <input type="text" class="form-control" id="referenceCode" 
+                                    <input type="hidden" class="form-control" id="referenceCode" 
                                            value="<%= user.referred_by %>" readonly>
-                                    <small class="form-text text-success">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        This is the reference code that referred you. Commission will be given to your referrer.
-                                    </small>
                                 <% } else { %>
-                                    <input type="text" class="form-control" id="referenceCode" 
-                                           placeholder="No reference code available">
-                                    <small class="form-text text-muted">
-                                        <i class="fas fa-info-circle me-1"></i>
-                                        You were not referred by anyone, so no commission will be given.
-                                    </small>
+                                    <input type="hidden" class="form-control" id="referenceCode" 
+                                           value="No reference code available">
                                 <% } %>
                             </div>
                         </div>
@@ -378,17 +463,6 @@
                                     <span>Payment Method:</span>
                                     <span id="summaryMethod">-</span>
                                 </div>
-                                <% if (user.referred_by) { %>
-                                    <div class="d-flex justify-content-between">
-                                        <span>Referrer:</span>
-                                        <span class="text-success"><%= user.referred_by %></span>
-                                    </div>
-                                <% } else { %>
-                                    <div class="d-flex justify-content-between">
-                                        <span>Referrer:</span>
-                                        <span class="text-muted">None</span>
-                                    </div>
-                                <% } %>
                                 <hr>
                                 <div class="d-flex justify-content-between fw-bold">
                                     <span>Total Amount:</span>
@@ -439,46 +513,7 @@
                     e.target.closest('.show-credentials-btn').innerHTML = '<i class="fas fa-eye-slash"></i>';
                 } else {
                     credRow.style.display = 'none';
-                    e.target.closest('.show-credentials-btn').innerHTML = '<i class="fas fa-key"></i>';
-                }
-            }
-            
-            // Access database
-            if (e.target.closest('.access-db-btn')) {
-                const dbId = e.target.closest('.access-db-btn').getAttribute('data-db-id');
-                
-                fetch(`/user/databases/${dbId}/access`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
-            }
-            
-            // Password toggle
-            if (e.target.closest('.toggle-password-btn')) {
-                const dbId = e.target.closest('.toggle-password-btn').getAttribute('data-db-id');
-                const hiddenSpan = document.getElementById('password-hidden-' + dbId);
-                const visibleSpan = document.getElementById('password-visible-' + dbId);
-                const icon = document.getElementById('password-icon-' + dbId);
-                
-                if (hiddenSpan.style.display === 'none') {
-                    hiddenSpan.style.display = 'inline';
-                    visibleSpan.style.display = 'none';
-                    icon.className = 'fas fa-eye';
-                } else {
-                    hiddenSpan.style.display = 'none';
-                    visibleSpan.style.display = 'inline';
-                    icon.className = 'fas fa-eye-slash';
+                    e.target.closest('.show-credentials-btn').innerHTML = '<i class="fas fa-credit-card"></i>';
                 }
             }
             
@@ -642,7 +677,7 @@
             .then(data => {
                 if (data.success) {
                     paymentModal.hide();
-                    showAlert('success', 'Payment submitted successfully! Your database will be renewed after verification.');
+                    showAlert('success', 'Payment submitted successfully! The domain will be renewed after verification.');
                     setTimeout(() => location.reload(), 2000);
                 } else {
                     throw new Error(data.message || 'Payment submission failed');
@@ -655,6 +690,15 @@
             .finally(() => {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<i class="fas fa-credit-card me-2"></i>Make Payment';
+            });
+        }
+
+        function copyReferenceCode() {
+            const code = '<%= user.reference_code %>';
+            navigator.clipboard.writeText(code).then(() => {
+                showAlert('success', 'Reference code copied to clipboard!');
+            }).catch(() => {
+                showAlert('danger', 'Failed to copy reference code');
             });
         }
 
@@ -672,22 +716,6 @@
                     alert.remove();
                 }
             }, 5000);
-        }
-
-        function togglePassword(dbId) {
-            const hiddenSpan = document.getElementById('password-hidden-' + dbId);
-            const visibleSpan = document.getElementById('password-visible-' + dbId);
-            const icon = document.getElementById('password-icon-' + dbId);
-            
-            if (hiddenSpan.style.display === 'none') {
-                hiddenSpan.style.display = 'inline';
-                visibleSpan.style.display = 'none';
-                icon.className = 'fas fa-eye';
-            } else {
-                hiddenSpan.style.display = 'none';
-                visibleSpan.style.display = 'inline';
-                icon.className = 'fas fa-eye-slash';
-            }
         }
     </script>
 </body>
