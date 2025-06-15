@@ -1505,13 +1505,39 @@ router.get('/db-management', async (req, res) => {
         // Fetch all databases from the database table
         const databases = await Database.findAll({ status: 'active' });
 
+        // Get recent execution batches
+        const SQLExecutionLogger = require('../models/SQLExecutionLogger');
+        let recentBatches = [];
+        let currentBatchResults = null;
+        let currentBatchSummary = null;
+
+        try {
+            recentBatches = await SQLExecutionLogger.getRecentBatches(10);
+            
+            // If there's a batch ID from recent execution, load its results
+            const batchId = req.flash('execution_batch_id')[0];
+            if (batchId) {
+                const [summary, errors] = await Promise.all([
+                    SQLExecutionLogger.getBatchSummary(batchId),
+                    SQLExecutionLogger.getBatchErrors(batchId)
+                ]);
+                currentBatchResults = errors; // Now contains only error details
+                currentBatchSummary = summary;
+            }
+        } catch (logError) {
+            console.error('Error loading execution logs:', logError);
+        }
+
         res.render('admin/db-management', {
             title: 'Database Management',
             sqlFileExists,
             fileLastModified: sqlFileExists ? fileStats.mtime.toLocaleString() : null,
             fileSize: sqlFileExists ? (fileStats.size / 1024).toFixed(2) + ' KB' : null,
             fileContent,
-            databases
+            databases,
+            recentBatches,
+            currentBatchResults,
+            currentBatchSummary
         });
     } catch (error) {
         console.error('DB Management page error:', error);
@@ -1522,7 +1548,10 @@ router.get('/db-management', async (req, res) => {
             fileLastModified: null,
             fileSize: null,
             fileContent: '',
-            databases: []
+            databases: [],
+            recentBatches: [],
+            currentBatchResults: null,
+            currentBatchSummary: null
         });
     }
 });
@@ -1594,21 +1623,48 @@ router.post('/db-management/delete', (req, res) => {
     res.redirect('/admin/db-management');
 });
 
-// Execute SQL query
+// Execute SQL query with server-side logging
 router.post('/db-management/execute-sql', async (req, res) => {
-    const { database, sqlQuery } = req.body;
-    const results = {};
-    const errors = {};
-
+    const { database, sqlQuery, continueOnError } = req.body;
+    const SQLExecutionLogger = require('../models/SQLExecutionLogger');
+    
     try {
         // Handle both single and multiple database selections
         const databases = Array.isArray(database) ? database : [database];
         
-        // Execute query for each database
+        if (databases.length === 0) {
+            req.flash('error_msg', 'No databases selected');
+            return res.redirect('/admin/db-management');
+        }
+
+        // Start execution logging
+        const logger = new SQLExecutionLogger();
+        const batchId = await logger.startBatch(sqlQuery, databases.length, req.user ? req.user.id : 'admin');
+
+
+        let shouldContinue = true;
+
+        // Get database info for logging
+        const Database = require('../models/Database');
+        const allDatabases = await Database.findAll({ status: 'active' });
+        const dbInfoMap = {};
+        allDatabases.forEach(db => {
+            dbInfoMap[db.database_name] = {
+                user_name: db.user_name || '',
+                domain_name: db.domain_name || ''
+            };
+        });
+
+        // Process each database
         for (const db of databases) {
+            if (!shouldContinue) break;
+
+            const dbInfo = dbInfoMap[db] || {};
             let connection;
+            const startTime = Date.now();
+
             try {
-                // Create a new connection to the current database
+                // Create database connection
                 connection = await mysql.createConnection({
                     host: process.env.DB_HOST || 'localhost',
                     user: process.env.DB_USER || 'root',
@@ -1625,31 +1681,31 @@ router.post('/db-management/execute-sql', async (req, res) => {
                     });
                 });
 
-                // Format the results for this database
-                let formattedResults;
-                if (Array.isArray(queryResults)) {
-                    if (queryResults.length === 0) {
-                        formattedResults = 'Query executed successfully. No results returned.';
-                    } else {
-                        // Get column names from the first row
-                        const columns = Object.keys(queryResults[0]);
-                        
-                        // Create a table-like format
-                        formattedResults = columns.join('\t') + '\n';
-                        formattedResults += '-'.repeat(columns.join('\t').length) + '\n';
-                        
-                        // Add each row
-                        queryResults.forEach(row => {
-                            formattedResults += columns.map(col => row[col]).join('\t') + '\n';
-                        });
-                    }
-                } else {
-                    formattedResults = 'Query executed successfully. Affected rows: ' + (queryResults.affectedRows || 0);
-                }
+                const executionTime = Date.now() - startTime;
 
-                results[db] = formattedResults;
+                // Log success (no detailed data stored, just count)
+                await logger.logSuccess(executionTime);
+                
+
             } catch (error) {
-                errors[db] = error.message;
+                const executionTime = Date.now() - startTime;
+                
+                // Log error with detailed information
+                await logger.logError(
+                    db, 
+                    sqlQuery, 
+                    executionTime, 
+                    error.message, 
+                    dbInfo.user_name, 
+                    dbInfo.domain_name, 
+                    req.user ? req.user.id : 'admin'
+                );
+                
+
+                // Check if we should continue on error
+                if (!continueOnError) {
+                    shouldContinue = false;
+                }
             } finally {
                 if (connection) {
                     try {
@@ -1661,29 +1717,229 @@ router.post('/db-management/execute-sql', async (req, res) => {
             }
         }
 
-        // Prepare the final results message
-        let finalResults = '';
-        for (const db of databases) {
-            finalResults += `\n=== Results for Database: ${db} ===\n`;
-            if (errors[db]) {
-                finalResults += `Error: ${errors[db]}\n`;
-            } else {
-                finalResults += results[db] + '\n';
-            }
+        // Complete or stop the batch
+        if (shouldContinue) {
+            await logger.completeBatch();
+        } else {
+            await logger.stopBatch();
         }
 
-        if (Object.keys(errors).length === 0) {
-            req.flash('success_msg', 'SQL query executed successfully on all databases');
+        // Get final batch summary for flash messages
+        const batchSummary = await SQLExecutionLogger.getBatchSummary(batchId);
+        const totalSuccess = batchSummary.successful_databases || 0;
+        const totalErrors = batchSummary.failed_databases || 0;
+        const summary = `Execution completed: ${totalSuccess} successful, ${totalErrors} failed`;
+        
+        if (totalErrors === 0) {
+            req.flash('success_msg', `✅ ${summary}. All queries executed successfully!`);
+        } else if (totalSuccess === 0) {
+            req.flash('error_msg', `❌ ${summary}. All queries failed!`);
         } else {
-            req.flash('warning_msg', 'SQL query executed with some errors. Check results for details.');
+            req.flash('warning_msg', `⚠️ ${summary}. Some queries failed.`);
         }
-        req.flash('sql_results', finalResults);
+
+        req.flash('execution_batch_id', batchId);
+        console.log(`🎉 Batch ${batchId} completed: ${summary}`);
+        
     } catch (error) {
         console.error('SQL execution error:', error);
-        req.flash('error_msg', `Error executing SQL: ${error.message}`);
+        req.flash('error_msg', `Execution failed: ${error.message}`);
     }
     
     res.redirect('/admin/db-management');
+});
+
+// Get execution batch results (API endpoint)
+router.get('/db-management/batch-results/:batchId', async (req, res) => {
+    try {
+        const SQLExecutionLogger = require('../models/SQLExecutionLogger');
+        const batchId = req.params.batchId;
+        
+        const [summary, errors] = await Promise.all([
+            SQLExecutionLogger.getBatchSummary(batchId),
+            SQLExecutionLogger.getBatchErrors(batchId)
+        ]);
+
+        res.json({
+            success: true,
+            batchId,
+            summary,
+            errors
+        });
+    } catch (error) {
+        console.error('Error getting batch results:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Get recent execution batches
+router.get('/db-management/recent-batches', async (req, res) => {
+    try {
+        const SQLExecutionLogger = require('../models/SQLExecutionLogger');
+        const batches = await SQLExecutionLogger.getRecentBatches(20);
+        
+        res.json({
+            success: true,
+            batches
+        });
+    } catch (error) {
+        console.error('Error getting recent batches:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// SQL Execution Error Logs Page
+router.get('/sql-error-logs', requireAuth, async (req, res) => {
+    try {
+        const SQLExecutionLogger = require('../models/SQLExecutionLogger');
+        
+        // Get query parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const filters = {
+            batch_name: req.query.batch_name,
+            database_name: req.query.database_name,
+            date_from: req.query.date_from,
+            date_to: req.query.date_to
+        };
+
+        // Remove empty filters
+        Object.keys(filters).forEach(key => {
+            if (!filters[key]) delete filters[key];
+        });
+
+        // Get error logs and statistics
+        const [errorData, errorStats] = await Promise.all([
+            SQLExecutionLogger.getErrorLogs(page, limit, filters),
+            SQLExecutionLogger.getErrorStats()
+        ]);
+
+        res.render('admin/sql-error-logs', {
+            title: 'SQL Execution Error Logs',
+            errors: errorData.errors,
+            pagination: errorData.pagination,
+            filters: req.query,
+            stats: errorStats,
+            currentPage: page
+        });
+
+    } catch (error) {
+        console.error('Error loading SQL error logs:', error);
+        req.flash('error_msg', 'Error loading error logs');
+        res.redirect('/admin/dashboard');
+    }
+});
+
+// API endpoint to get error details
+router.get('/api/sql-error/:errorId', requireAuth, async (req, res) => {
+    try {
+        const { errorId } = req.params;
+        const db = require('../config/database');
+        
+        const query = `
+            SELECT 
+                e.*,
+                l.execution_batch_name,
+                l.status as batch_status,
+                l.started_at as batch_started_at,
+                l.completed_at as batch_completed_at,
+                l.total_databases as batch_total_databases,
+                l.successful_databases as batch_successful_databases,
+                l.failed_databases as batch_failed_databases
+            FROM sql_execution_errors e
+            LEFT JOIN sql_execution_logs l ON e.execution_batch_id = l.execution_batch_id
+            WHERE e.id = ?
+        `;
+        
+        const results = await db.executeQuery(query, [errorId]);
+        
+        if (results.length === 0) {
+            return res.status(404).json({
+                success: false,
+                error: 'Error log not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            error: results[0]
+        });
+
+    } catch (error) {
+        console.error('Error getting error details:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// Export error logs as CSV
+router.get('/sql-error-logs/export', requireAuth, async (req, res) => {
+    try {
+        const SQLExecutionLogger = require('../models/SQLExecutionLogger');
+        
+        const filters = {
+            batch_name: req.query.batch_name,
+            database_name: req.query.database_name,
+            date_from: req.query.date_from,
+            date_to: req.query.date_to
+        };
+
+        // Remove empty filters
+        Object.keys(filters).forEach(key => {
+            if (!filters[key]) delete filters[key];
+        });
+
+        // Get all errors for export (no pagination)
+        const errorData = await SQLExecutionLogger.getErrorLogs(1, 10000, filters);
+
+        // Create CSV content
+        const headers = [
+            'Batch Name',
+            'Batch ID', 
+            'Database Name',
+            'Error Message',
+            'Execution Time (ms)',
+            'User Name',
+            'Domain Name',
+            'Error Date',
+            'Batch Status'
+        ];
+
+        const rows = errorData.errors.map(error => [
+            error.execution_batch_name,
+            error.execution_batch_id,
+            error.database_name,
+            error.error_message.replace(/"/g, '""'), // Escape quotes
+            error.execution_time_ms,
+            error.user_name || '',
+            error.domain_name || '',
+            new Date(error.created_at).toISOString(),
+            error.batch_status || ''
+        ]);
+
+        const csvContent = [headers, ...rows]
+            .map(row => row.map(field => `"${field}"`).join(','))
+            .join('\n');
+
+        const filename = `sql_error_logs_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`;
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.send(csvContent);
+
+    } catch (error) {
+        console.error('Error exporting error logs:', error);
+        req.flash('error_msg', 'Error exporting logs');
+        res.redirect('/admin/sql-error-logs');
+    }
 });
 
 module.exports = router; 

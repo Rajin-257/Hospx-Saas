@@ -121,7 +121,7 @@
                 <div class="card">
                     <div class="card-header">
                         <h5 class="mb-0">
-                            <i class="fas fa-database me-2"></i>Database sql Execute
+                            <i class="fas fa-database me-2"></i>Database SQL Execute
                         </h5>
                     </div>
                     <div class="card-body">
@@ -153,6 +153,11 @@
                                 <div class="form-text">
                                     Hold Ctrl (Windows) or Command (Mac) to select multiple databases
                                 </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <span id="selectedCount">0</span> database(s) selected
+                                    </small>
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label for="sqlQuery" class="form-label">
@@ -160,48 +165,225 @@
                                 </label>
                                 <textarea class="form-control" id="sqlQuery" name="sqlQuery" rows="5" required></textarea>
                             </div>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="continueOnError" name="continueOnError" checked>
+                                    <label class="form-check-label" for="continueOnError">
+                                        Continue execution on other databases if one fails
+                                    </label>
+                                </div>
+                            </div>
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-play me-2"></i>Execute SQL
                             </button>
                         </form>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                        <% if (typeof sql_results !== 'undefined' && sql_results) { %>
-                            <div class="mt-4">
-                                <h6 class="mb-3">Query Results:</h6>
-                                <div class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;">
-                                    <pre class="mb-0"><code><%= sql_results %></code></pre>
+        <!-- Current Execution Results -->
+        <% if (currentBatchSummary) { %>
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-bar me-2"></i>Latest Execution Results
+                        </h5>
+                        <!-- <div>
+                            <button class="btn btn-sm btn-outline-success" onclick="exportCurrentResults()">
+                                <i class="fas fa-download me-1"></i>Export
+                            </button>
+                        </div> -->
+                    </div>
+                    <div class="card-body">
+                        <!-- Summary -->
+                        <div class="alert alert-info mb-3">
+                            <div class="row text-center">
+                                <div class="col-md-3">
+                                    <div class="h5 mb-0"><%= currentBatchSummary.total_databases || 0 %></div>
+                                    <small>Total Databases</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="h5 text-success mb-0"><%= currentBatchSummary.successful_databases || 0 %></div>
+                                    <small>Successful</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="h5 text-danger mb-0"><%= currentBatchSummary.failed_databases || 0 %></div>
+                                    <small>Failed</small>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="h5 text-muted mb-0">
+                                        <%= currentBatchSummary.avg_execution_time_ms ? Math.round(currentBatchSummary.avg_execution_time_ms) + 'ms' : '0ms' %>
+                                    </div>
+                                    <small>Avg Time</small>
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Status Message -->
+                        <% if (currentBatchSummary.failed_databases > 0) { %>
+                            <div class="alert alert-warning mb-3">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong><%= currentBatchSummary.failed_databases %></strong> database(s) encountered errors during execution.
+                                View details below.
+                            </div>
+                        <% } else { %>
+                            <div class="alert alert-success mb-3">
+                                <i class="fas fa-check-circle me-2"></i>
+                                All <strong><%= currentBatchSummary.successful_databases %></strong> database(s) executed successfully!
+                            </div>
+                        <% } %>
+
+                        <!-- Error Details Table (only shown if there are errors) -->
+                        <% if (currentBatchResults && currentBatchResults.length > 0) { %>
+                        <div class="table-responsive">
+                            <h6 class="text-danger mb-3">
+                                <i class="fas fa-exclamation-circle me-2"></i>Failed Database Details
+                            </h6>
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th width="5%">#</th>
+                                        <th width="25%">Database</th>
+                                        <th width="15%">Time</th>
+                                        <th width="25%">User/Domain</th>
+                                        <th width="30%">Error Message</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="resultsTableBody">
+                                    <% currentBatchResults.forEach((error, index) => { %>
+                                        <tr class="table-danger">
+                                            <td><%= index + 1 %></td>
+                                            <td><strong><%= error.database_name %></strong></td>
+                                            <td><%= error.execution_time_ms %>ms</td>
+                                            <td>
+                                                <% if (error.user_name) { %>
+                                                    <small class="text-muted">User: <%= error.user_name %></small><br>
+                                                <% } %>
+                                                <% if (error.domain_name) { %>
+                                                    <small class="text-muted">Domain: <%= error.domain_name %></small>
+                                                <% } %>
+                                            </td>
+                                            <td>
+                                                <small class="text-danger">
+                                                    <%= error.error_message.length > 100 ? 
+                                                        error.error_message.substring(0, 100) + '...' : 
+                                                        error.error_message %>
+                                                </small>
+                                                <!-- <% if (error.error_message.length > 100) { %>
+                                                    <br><button class="btn btn-sm btn-outline-danger mt-1" 
+                                                            onclick="showFullError('<%= error.id %>')">
+                                                        <i class="fas fa-eye me-1"></i>Full Error
+                                                    </button>
+                                                <% } %> -->
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
                         <% } %>
                     </div>
                 </div>
             </div>
         </div>
+        <% } %>
 
-        <!-- File Preview Section (if file exists) -->
-        <% if (sqlFileExists) { %>
+        <!-- Recent Execution History -->
+        <% if (recentBatches && recentBatches.length > 0) { %>
         <div class="row mt-4">
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-eye me-2"></i>File Preview
+                        <h5 class="mb-0 d-inline-block">
+                            <i class="fas fa-history me-2"></i>Recent Execution History
                         </h5>
+
+                        <div class="float-end">
+                            <a href="/admin/sql-error-logs" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-exclamation-triangle me-1"></i>SQL Error Logs
+                            </a>
+                        </div>
                     </div>
                     <div class="card-body">
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="showPreview">
-                            <label class="form-check-label" for="showPreview">
-                                Show file content preview
-                            </label>
-                        </div>
-                        <div id="previewContent" class="d-none">
-                            <pre class="bg-light p-3 rounded" style="max-height: 400px; overflow-y: auto;"><code><%= fileContent %></code></pre>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Batch Name / Date</th>
+                                        <th>Databases</th>
+                                        <th>Success Rate</th>
+                                        <th>Duration</th>
+                                        <th>Query Preview</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% recentBatches.forEach((batch) => { %>
+                                        <tr>
+                                            <td>
+                                                <div><strong><%= batch.execution_batch_name || 'Unnamed Batch' %></strong></div>
+                                                <small class="text-muted"><%= new Date(batch.started_at).toLocaleString() %></small>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info"><%= batch.total_databases %></span>
+                                            </td>
+                                            <td>
+                                                <% 
+                                                    const successRate = batch.total_databases > 0 ? 
+                                                        Math.round((batch.successful_databases / batch.total_databases) * 100) : 0;
+                                                    const badgeClass = successRate === 100 ? 'bg-success' : 
+                                                                      successRate >= 50 ? 'bg-warning' : 'bg-danger';
+                                                %>
+                                                <span class="badge <%= badgeClass %>">
+                                                    <%= successRate %>% (<%= batch.successful_databases %>/<%= batch.total_databases %>)
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <% if (batch.completed_at) { %>
+                                                    <%= Math.round((new Date(batch.completed_at) - new Date(batch.started_at)) / 1000) %>s
+                                                <% } else { %>
+                                                    <span class="text-muted">Running...</span>
+                                                <% } %>
+                                            </td>
+                                            <td>
+                                                <small class="text-muted">
+                                                    <%= batch.query_preview ? batch.query_preview.substring(0, 50) + '...' : 'N/A' %>
+                                                </small>
+                                            </td>
+                                            <td>
+                                                <!-- <button class="btn btn-sm btn-outline-primary" 
+                                                        onclick="loadBatchResults('<%= batch.execution_batch_id %>')">
+                                                    <i class="fas fa-eye me-1"></i>View
+                                                </button> -->
+                                                <% if (batch.failed_databases > 0) { %>
+                                                    <a href="/admin/sql-error-logs?batch_name=<%= encodeURIComponent(batch.execution_batch_name) %>" 
+                                                       class="btn btn-sm btn-outline-danger">
+                                                        <i class="fas fa-exclamation-triangle me-1"></i>Errors
+                                                    </a>
+                                                <% } %>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        <% } %>
+
+        <!-- Legacy Results (for backward compatibility) -->
+        <% if (typeof sql_results !== 'undefined' && sql_results) { %>
+            <div class="mt-4">
+                <h6 class="mb-3">Query Results:</h6>
+                <div class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;">
+                    <pre class="mb-0"><code><%= sql_results %></code></pre>
+                </div>
+            </div>
         <% } %>
     </div>
 
@@ -232,18 +414,110 @@
         </div>
     </div>
 
+    <!-- Error Details Modal -->
+    <div class="modal fade" id="errorDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-circle me-2 text-danger"></i>
+                        Error Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <strong>Database:</strong> <span id="errorModalDatabase"></span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Error Message:</strong>
+                        <div class="mt-2">
+                            <pre id="errorModalMessage" class="bg-light p-3 rounded border"></pre>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <strong>SQL Query:</strong>
+                        <div class="mt-2">
+                            <pre id="errorModalQuery" class="bg-light p-3 rounded border"></pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="copyErrorBtn">
+                        <i class="fas fa-copy me-1"></i>Copy Error
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Details Modal -->
+    <div class="modal fade" id="successDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-check-circle me-2 text-success"></i>
+                        Execution Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <strong>Database:</strong> <span id="successModalDatabase"></span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Execution Time:</strong> <span id="successModalDuration"></span>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Result:</strong>
+                        <div class="mt-2">
+                            <pre id="successModalResult" class="bg-light p-3 rounded border" style="max-height: 300px; overflow-y: auto;"></pre>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <strong>SQL Query:</strong>
+                        <div class="mt-2">
+                            <pre id="successModalQuery" class="bg-light p-3 rounded border"></pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="copySuccessBtn">
+                        <i class="fas fa-copy me-1"></i>Copy Result
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <%- include('../partials/scripts') %>
     
     <script>
-        // Toggle file preview
-        document.getElementById('showPreview').addEventListener('change', function() {
-            const previewContent = document.getElementById('previewContent');
-            if (this.checked) {
-                previewContent.classList.remove('d-none');
-            } else {
-                previewContent.classList.add('d-none');
-            }
-        });
+        // Store current batch results for client-side operations
+        const currentBatchResults = JSON.parse('<%- JSON.stringify(currentBatchResults || []) %>');
+        const currentBatchSummary = JSON.parse('<%- JSON.stringify(currentBatchSummary || {}) %>');
+        const sqlFileExists = JSON.parse('<%- JSON.stringify(sqlFileExists || false) %>');
+        
+        // Toggle file preview (if still needed for file preview section)
+        if (sqlFileExists && document.getElementById('showPreview')) {
+            document.getElementById('showPreview').addEventListener('change', function() {
+                const previewContent = document.getElementById('previewContent');
+                if (this.checked) {
+                    previewContent.classList.remove('d-none');
+                } else {
+                    previewContent.classList.add('d-none');
+                }
+            });
+        }
+
+        // Update selected count
+        function updateSelectedCount() {
+            const selectedOptions = Array.from(document.getElementById('database').selectedOptions);
+            document.getElementById('selectedCount').textContent = selectedOptions.length;
+        }
 
         // Select All Databases functionality
         document.getElementById('selectAllDatabases').addEventListener('change', function() {
@@ -255,6 +529,7 @@
                     options[i].selected = this.checked;
                 }
             }
+            updateSelectedCount();
         });
 
         // Update Select All checkbox when individual selections change
@@ -262,15 +537,19 @@
             const selectAllCheckbox = document.getElementById('selectAllDatabases');
             const options = this.options;
             let allSelected = true;
+            let visibleCount = 0;
             
             for (let i = 0; i < options.length; i++) {
-                if (!options[i].classList.contains('d-none') && !options[i].selected) {
-                    allSelected = false;
-                    break;
+                if (!options[i].classList.contains('d-none')) {
+                    visibleCount++;
+                    if (!options[i].selected) {
+                        allSelected = false;
+                    }
                 }
             }
             
-            selectAllCheckbox.checked = allSelected;
+            selectAllCheckbox.checked = allSelected && visibleCount > 0;
+            updateSelectedCount();
         });
 
         // Database search functionality
@@ -300,19 +579,173 @@
             selectAllCheckbox.checked = visibleCount > 0 && Array.from(options).every(opt => 
                 opt.classList.contains('d-none') || opt.selected
             );
+            updateSelectedCount();
         });
 
         // Form validation for upload
-        document.querySelector('form[action="/admin/db-management/upload"]').addEventListener('submit', function(e) {
-            const confirmOverwrite = document.getElementById('confirmOverwrite');
-            const sqlFileExists = `<%- JSON.stringify(sqlFileExists) %>`;
-            
-            if (sqlFileExists && !confirmOverwrite.checked) {
-                e.preventDefault();
-                alert('Please confirm that you want to overwrite the existing file.');
-                return false;
+        const uploadForm = document.querySelector('form[action="/admin/db-management/upload"]');
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', function(e) {
+                const confirmOverwrite = document.getElementById('confirmOverwrite');
+                
+                if (sqlFileExists && !confirmOverwrite.checked) {
+                    e.preventDefault();
+                    alert('Please confirm that you want to overwrite the existing file.');
+                    return false;
+                }
+            });
+        }
+
+        // Show full error message
+        function showFullError(errorId) {
+            const error = currentBatchResults.find(e => e.id === errorId);
+            if (!error) return;
+
+            // Create modal content
+            const modalContent = `
+                <div class="modal fade" id="fullErrorModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header bg-danger text-white">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-exclamation-circle me-2"></i>Full Error Details
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <strong>Database:</strong> ${error.database_name}
+                                </div>
+                                <div class="mb-3">
+                                    <strong>Execution Time:</strong> ${error.execution_time_ms}ms
+                                </div>
+                                ${error.user_name ? `<div class="mb-3"><strong>User:</strong> ${error.user_name}</div>` : ''}
+                                ${error.domain_name ? `<div class="mb-3"><strong>Domain:</strong> ${error.domain_name}</div>` : ''}
+                                <div class="mb-3">
+                                    <strong>Error Message:</strong>
+                                    <div class="bg-light p-3 rounded mt-2">
+                                        <pre class="mb-0 text-danger">${error.error_message}</pre>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <strong>SQL Query:</strong>
+                                    <div class="bg-light p-3 rounded mt-2">
+                                        <pre class="mb-0"><code>${error.sql_query}</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Remove existing modal if any
+            const existingModal = document.getElementById('fullErrorModal');
+            if (existingModal) {
+                existingModal.remove();
             }
+
+            // Add modal to body and show
+            document.body.insertAdjacentHTML('beforeend', modalContent);
+            new bootstrap.Modal(document.getElementById('fullErrorModal')).show();
+        }
+
+        // Load batch results from history
+        async function loadBatchResults(batchId) {
+            try {
+                const response = await fetch(`/admin/db-management/batch-results/${batchId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Redirect to page with results (or you could dynamically update the current page)
+                    window.location.href = `/admin/db-management?batch=${batchId}`;
+                } else {
+                    alert('Error loading batch results: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error loading batch results: ' + error.message);
+            }
+        }
+
+        // Export current results
+        function exportCurrentResults() {
+            if (!currentBatchSummary || !currentBatchSummary.execution_batch_id) {
+                alert('No execution data to export');
+                return;
+            }
+
+            // Create summary data
+            const summaryHeaders = ['Metric', 'Value'];
+            const summaryRows = [
+                ['Batch ID', currentBatchSummary.execution_batch_id],
+                ['Total Databases', currentBatchSummary.total_databases || 0],
+                ['Successful Databases', currentBatchSummary.successful_databases || 0],
+                ['Failed Databases', currentBatchSummary.failed_databases || 0],
+                ['Average Execution Time (ms)', currentBatchSummary.avg_execution_time_ms || 0],
+                ['Status', currentBatchSummary.status || 'Unknown'],
+                ['Started At', new Date(currentBatchSummary.started_at).toISOString()],
+                ['Completed At', currentBatchSummary.completed_at ? new Date(currentBatchSummary.completed_at).toISOString() : 'N/A']
+            ];
+
+            let csvContent = 'EXECUTION SUMMARY\n';
+            csvContent += [summaryHeaders, ...summaryRows]
+                .map(row => row.map(field => `"${field}"`).join(','))
+                .join('\n');
+
+            // Add error details if any
+            if (currentBatchResults && currentBatchResults.length > 0) {
+                csvContent += '\n\nERROR DETAILS\n';
+                const errorHeaders = ['Database', 'Execution Time (ms)', 'User', 'Domain', 'Error Message', 'Timestamp'];
+                const errorRows = currentBatchResults.map(error => [
+                    error.database_name,
+                    error.execution_time_ms,
+                    error.user_name || '',
+                    error.domain_name || '',
+                    error.error_message.replace(/"/g, '""'), // Escape quotes in CSV
+                    new Date(error.created_at).toISOString()
+                ]);
+
+                csvContent += [errorHeaders, ...errorRows]
+                    .map(row => row.map(field => `"${field}"`).join(','))
+                    .join('\n');
+            }
+
+            downloadCSV(csvContent, `sql_execution_report_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`);
+        }
+
+        // Download CSV file
+        function downloadCSV(content, filename) {
+            const blob = new Blob([content], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Copy functionality
+        document.getElementById('copyErrorBtn')?.addEventListener('click', function() {
+            const errorText = document.getElementById('errorModalMessage').textContent;
+            navigator.clipboard.writeText(errorText).then(() => {
+                alert('Error message copied to clipboard');
+            });
         });
+
+        document.getElementById('copySuccessBtn')?.addEventListener('click', function() {
+            const resultText = document.getElementById('successModalResult').textContent;
+            navigator.clipboard.writeText(resultText).then(() => {
+                alert('Result copied to clipboard');
+            });
+        });
+
+        // Initialize selected count on page load
+        updateSelectedCount();
     </script>
 </body>
 </html> 

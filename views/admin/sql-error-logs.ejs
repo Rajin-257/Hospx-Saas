@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<%- include('../partials/head') %>
+<head>
+    <style>
+        .error-message-cell {
+            max-width: 300px;
+            word-wrap: break-word;
+            white-space: normal;
+        }
+        .table-responsive {
+            border-radius: 0.375rem;
+        }
+        .badge {
+            font-size: 0.75em;
+        }
+        .modal-header.bg-danger .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+    </style>
+</head>
+<body>
+    <%- include('../partials/navbar-admin', { currentPage: 'sql-error-logs' }) %>
+
+    <!-- Flash Messages -->
+    <% if (typeof success_msg !== 'undefined' && success_msg.length > 0) { %>
+        <div class="alert alert-success alert-dismissible fade show m-3" role="alert">
+            <%= success_msg %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <% } %>
+
+    <% if (typeof error_msg !== 'undefined' && error_msg.length > 0) { %>
+        <div class="alert alert-danger alert-dismissible fade show m-3" role="alert">
+            <%= error_msg %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    <% } %>
+
+    <div class="container mt-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2><i class="fas fa-exclamation-triangle me-2"></i>SQL Execution Error Logs</h2>
+                        <p class="text-muted">Monitor and analyze SQL execution failures</p>
+                    </div>
+                    <div>
+                        <a href="/admin/sql-error-logs/export<%= Object.keys(filters).length > 0 ? '?' + new URLSearchParams(filters).toString() : '' %>" 
+                           class="btn btn-success">
+                            <i class="fas fa-download me-2"></i>Export CSV
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="row g-4 mb-4">
+            <div class="col-lg-3 col-6">
+                <div class="card stats-card bg-danger text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0"><%= stats.summary.total_errors || 0 %></h4>
+                                <p class="mb-0">Total Errors</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-exclamation-triangle fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="card stats-card bg-warning text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0"><%= stats.summary.total_affected_batches || 0 %></h4>
+                                <p class="mb-0">Affected Batches</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-layer-group fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="card stats-card bg-info text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0"><%= stats.summary.total_affected_databases || 0 %></h4>
+                                <p class="mb-0">Affected Databases</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-database fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-6">
+                <div class="card stats-card bg-secondary text-white">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h4 class="mb-0"><%= stats.summary.avg_error_time ? Math.round(stats.summary.avg_error_time) + 'ms' : '0ms' %></h4>
+                                <p class="mb-0">Avg Error Time</p>
+                            </div>
+                            <div class="align-self-center">
+                                <i class="fas fa-clock fa-2x"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-filter me-2"></i>Filters & Search
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="GET" action="/admin/sql-error-logs" class="row g-3">
+                            <div class="col-md-3">
+                                <label for="batch_name" class="form-label">Batch Name</label>
+                                <input type="text" class="form-control" id="batch_name" name="batch_name" 
+                                       value="<%= filters.batch_name || '' %>" placeholder="Enter batch name...">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="database_name" class="form-label">Database Name</label>
+                                <input type="text" class="form-control" id="database_name" name="database_name" 
+                                       value="<%= filters.database_name || '' %>" placeholder="Enter database name...">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="date_from" class="form-label">From Date</label>
+                                <input type="date" class="form-control" id="date_from" name="date_from" 
+                                       value="<%= filters.date_from || '' %>">
+                            </div>
+                            <div class="col-md-2">
+                                <label for="date_to" class="form-label">To Date</label>
+                                <input type="date" class="form-control" id="date_to" name="date_to" 
+                                       value="<%= filters.date_to || '' %>">
+                            </div>
+                            <div class="col-md-2">
+                                <label>&nbsp;</label>
+                                <div class="d-grid">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-search me-1"></i>Search
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <a href="/admin/sql-error-logs" class="btn btn-secondary btn-sm">
+                                    <i class="fas fa-times me-1"></i>Clear Filters
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Logs Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>Error Logs
+                            <span class="badge bg-danger ms-2"><%= pagination.total %></span>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <% if (errors && errors.length > 0) { %>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Batch Name</th>
+                                            <th>Database</th>
+                                            <th>Error</th>
+                                            <th>Time</th>
+                                            <th>User/Domain</th>
+                                            <th>Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% errors.forEach(function(error) { %>
+                                            <tr>
+                                                <td>
+                                                    <span class="badge bg-info"><%= error.execution_batch_name %></span>
+                                                    <br><small class="text-muted"><%= error.batch_status || 'Unknown' %></small>
+                                                </td>
+                                                <td>
+                                                    <strong><%= error.database_name %></strong>
+                                                </td>
+                                                <td class="error-message-cell">
+                                                    <span class="text-danger">
+                                                        <%= error.error_message.length > 100 ? 
+                                                            error.error_message.substring(0, 100) + '...' : 
+                                                            error.error_message %>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-secondary"><%= error.execution_time_ms %>ms</span>
+                                                </td>
+                                                <td>
+                                                    <% if (error.user_name) { %>
+                                                        <small class="text-muted">User: <%= error.user_name %></small><br>
+                                                    <% } %>
+                                                    <% if (error.domain_name) { %>
+                                                        <small class="text-muted">Domain: <%= error.domain_name %></small>
+                                                    <% } %>
+                                                    <% if (!error.user_name && !error.domain_name) { %>
+                                                        <small class="text-muted">N/A</small>
+                                                    <% } %>
+                                                </td>
+                                                <td>
+                                                    <small><%= new Date(error.created_at).toLocaleString() %></small>
+                                                </td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-primary error-details-btn" 
+                                                            data-error-id="<%= error.id %>">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <% } else { %>
+                            <div class="text-center p-4">
+                                <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
+                                <h5>No Error Logs Found</h5>
+                                <p class="text-muted">There are no error logs matching your criteria.</p>
+                            </div>
+                        <% } %>
+                    </div>
+
+                    <!-- Pagination -->
+                    <% if (pagination.pages > 1) { %>
+                        <div class="card-footer">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <small class="text-muted">
+                                        Showing <%= ((pagination.page - 1) * pagination.limit) + 1 %> to 
+                                        <%= Math.min(pagination.page * pagination.limit, pagination.total) %> of 
+                                        <%= pagination.total %> entries
+                                    </small>
+                                </div>
+                                <nav>
+                                    <ul class="pagination pagination-sm mb-0">
+                                        <!-- Previous Page -->
+                                        <% if (pagination.page > 1) { %>
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page=<%= pagination.page - 1 %><%= Object.keys(filters).length > 0 ? '&' + new URLSearchParams(filters).toString() : '' %>">
+                                                    &laquo;
+                                                </a>
+                                            </li>
+                                        <% } %>
+
+                                        <!-- Page Numbers -->
+                                        <% 
+                                            const startPage = Math.max(1, pagination.page - 2);
+                                            const endPage = Math.min(pagination.pages, pagination.page + 2);
+                                            for (let i = startPage; i <= endPage; i++) { 
+                                        %>
+                                            <li class="page-item <%= i === pagination.page ? 'active' : '' %>">
+                                                <a class="page-link" href="?page=<%= i %><%= Object.keys(filters).length > 0 ? '&' + new URLSearchParams(filters).toString() : '' %>">
+                                                    <%= i %>
+                                                </a>
+                                            </li>
+                                        <% } %>
+
+                                        <!-- Next Page -->
+                                        <% if (pagination.page < pagination.pages) { %>
+                                            <li class="page-item">
+                                                <a class="page-link" href="?page=<%= pagination.page + 1 %><%= Object.keys(filters).length > 0 ? '&' + new URLSearchParams(filters).toString() : '' %>">
+                                                    &raquo;
+                                                </a>
+                                            </li>
+                                        <% } %>
+                                    </ul>
+                                </nav>
+                            </div>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Details Modal -->
+    <div class="modal fade" id="errorDetailsModal" tabindex="-1" role="dialog" aria-labelledby="errorDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="errorDetailsModalLabel">
+                        <i class="fas fa-exclamation-circle me-2"></i>Error Details
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="errorDetailsContent">
+                        <div class="text-center">
+                            <i class="fas fa-spinner fa-spin fa-2x"></i>
+                            <p class="mt-2">Loading error details...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <%- include('../partials/scripts') %>
+
+    <script>
+        // Add event listeners for error details buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            const errorDetailsButtons = document.querySelectorAll('.error-details-btn');
+            errorDetailsButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const errorId = this.getAttribute('data-error-id');
+                    showErrorDetails(errorId);
+                });
+            });
+        });
+
+        // Show error details
+        async function showErrorDetails(errorId) {
+            const modal = new bootstrap.Modal(document.getElementById('errorDetailsModal'));
+            const content = document.getElementById('errorDetailsContent');
+            
+            // Show modal with loading state
+            modal.show();
+            content.innerHTML = `
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin fa-2x"></i>
+                    <p class="mt-2">Loading error details...</p>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch(`/admin/api/sql-error/${errorId}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const error = data.error;
+                    content.innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-danger"><i class="fas fa-info-circle me-1"></i>Error Information</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <th width="30%">Batch Name:</th>
+                                        <td><span class="badge bg-info">${error.execution_batch_name}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Database:</th>
+                                        <td><strong>${error.database_name}</strong></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Execution Time:</th>
+                                        <td><span class="badge bg-secondary">${error.execution_time_ms}ms</span></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Error Date:</th>
+                                        <td>${new Date(error.created_at).toLocaleString()}</td>
+                                    </tr>
+                                    ${error.user_name ? `<tr><th>User:</th><td>${error.user_name}</td></tr>` : ''}
+                                    ${error.domain_name ? `<tr><th>Domain:</th><td>${error.domain_name}</td></tr>` : ''}
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-info"><i class="fas fa-layer-group me-1"></i>Batch Information</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <th width="30%">Batch Status:</th>
+                                        <td><span class="badge bg-${error.batch_status === 'completed' ? 'success' : error.batch_status === 'running' ? 'warning' : 'secondary'}">${error.batch_status || 'Unknown'}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Total Databases:</th>
+                                        <td>${error.batch_total_databases || 0}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Successful:</th>
+                                        <td><span class="text-success">${error.batch_successful_databases || 0}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Failed:</th>
+                                        <td><span class="text-danger">${error.batch_failed_databases || 0}</span></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Started:</th>
+                                        <td>${error.batch_started_at ? new Date(error.batch_started_at).toLocaleString() : 'N/A'}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Completed:</th>
+                                        <td>${error.batch_completed_at ? new Date(error.batch_completed_at).toLocaleString() : 'N/A'}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <h6 class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Error Message</h6>
+                            <div class="bg-light p-3 rounded">
+                                <pre class="mb-0 text-danger">${error.error_message}</pre>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <h6 class="text-primary"><i class="fas fa-code me-1"></i>SQL Query</h6>
+                            <div class="bg-light p-3 rounded">
+                                <pre class="mb-0"><code>${error.sql_query}</code></pre>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    content.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Error loading details: ${data.error}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                content.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Network error: ${error.message}
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html> 

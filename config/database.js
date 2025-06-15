@@ -153,6 +153,47 @@ async function createTables() {
             description TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        )`,
+
+        // SQL execution logs table (summary)
+        `CREATE TABLE IF NOT EXISTS sql_execution_logs (
+            id VARCHAR(36) PRIMARY KEY,
+            execution_batch_id VARCHAR(36) NOT NULL UNIQUE,
+            execution_batch_name VARCHAR(255) NOT NULL,
+            sql_query TEXT NOT NULL,
+            total_databases INT NOT NULL DEFAULT 0,
+            successful_databases INT NOT NULL DEFAULT 0,
+            failed_databases INT NOT NULL DEFAULT 0,
+            pending_databases INT NOT NULL DEFAULT 0,
+            avg_execution_time_ms INT DEFAULT 0,
+            total_execution_time_ms INT DEFAULT 0,
+            status ENUM('running', 'completed', 'stopped') DEFAULT 'running',
+            executed_by VARCHAR(36),
+            started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            completed_at TIMESTAMP NULL,
+            INDEX idx_batch_id (execution_batch_id),
+            INDEX idx_batch_name (execution_batch_name),
+            INDEX idx_status (status),
+            INDEX idx_started_at (started_at)
+        )`,
+
+        // SQL execution errors table (detailed errors only)
+        `CREATE TABLE IF NOT EXISTS sql_execution_errors (
+            id VARCHAR(36) PRIMARY KEY,
+            execution_batch_id VARCHAR(36) NOT NULL,
+            execution_batch_name VARCHAR(255) NOT NULL,
+            database_name VARCHAR(255) NOT NULL,
+            sql_query TEXT NOT NULL,
+            execution_time_ms INT DEFAULT 0,
+            error_message TEXT NOT NULL,
+            user_name VARCHAR(255),
+            domain_name VARCHAR(255),
+            executed_by VARCHAR(36),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_batch_id (execution_batch_id),
+            INDEX idx_batch_name (execution_batch_name),
+            INDEX idx_database (database_name),
+            INDEX idx_created_at (created_at)
         )`
     ];
 
