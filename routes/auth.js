@@ -42,8 +42,11 @@ router.post('/login', isNotAuthenticated, [
     body('password').notEmpty()
 ], async (req, res) => {
     try {
+        console.log('Login attempt for email:', req.body.email);
+        
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
+            console.log('Validation errors:', errors.array());
             req.flash('error_msg', 'Please provide valid email and password');
             return res.redirect('/login');
         }
@@ -52,44 +55,82 @@ router.post('/login', isNotAuthenticated, [
 
         // Find user
         const user = await User.findByEmail(email);
+        console.log('User found:', user ? 'Yes' : 'No');
+        
         if (!user) {
+            console.log('No user found with email:', email);
             req.flash('error_msg', 'Invalid email or password');
             return res.redirect('/login');
         }
 
         // Check if user has password (only executives and admins can login)
         if (!user.password || user.role === 'user') {
+            console.log('User has no password or is regular user:', { hasPassword: !!user.password, role: user.role });
             req.flash('error_msg', 'Your account is pending approval. You will receive login credentials once approved.');
             return res.redirect('/login');
         }
 
         // Check if account is active
         if (user.status !== 'active') {
+            console.log('User account is not active:', user.status);
             req.flash('error_msg', 'Your account has been deactivated. Please contact support.');
             return res.redirect('/login');
         }
 
         // Verify password
         const isValidPassword = await user.verifyPassword(password);
+        console.log('Password verification result:', isValidPassword);
+        
         if (!isValidPassword) {
+            console.log('Invalid password for user:', email);
             req.flash('error_msg', 'Invalid email or password');
             return res.redirect('/login');
         }
 
         // Set session
-        req.session.user = user.toJSON();
-        req.flash('success_msg', `Welcome back, ${user.full_name}!`);
+        const userData = {
+            id: user.id,
+            full_name: user.full_name,
+            email: user.email,
+            phone: user.phone,
+            role: user.role,
+            status: user.status,
+            reference_code: user.reference_code,
+            commission_percentage: user.commission_percentage,
+            commission_fixed: user.commission_fixed,
+            commission_type: user.commission_type
+        };
 
-        // Redirect based on role
-        if (user.role === 'superadmin' || user.role === 'admin') {
-            res.redirect('/admin/dashboard');
-        } else if (user.role === 'executive') {
-            res.redirect('/user/dashboard');
-        } else {
-            res.redirect('/dashboard');
-        }
+        console.log('Setting session with user data:', userData);
+        req.session.user = userData;
+        
+        // Force session save
+        req.session.save((err) => {
+            if (err) {
+                console.error('Session save error:', err);
+                req.flash('error_msg', 'An error occurred during login. Please try again.');
+                return res.redirect('/login');
+            }
+            console.log('Session saved successfully');
+            console.log('Session after save:', req.session);
+            
+            req.flash('success_msg', `Welcome back, ${userData.full_name}!`);
+
+            // Redirect based on role
+            if (userData.role === 'superadmin' || userData.role === 'admin') {
+                console.log('Redirecting to admin dashboard');
+                return res.redirect('/admin/dashboard');
+            } else if (userData.role === 'executive') {
+                console.log('Redirecting to user dashboard');
+                return res.redirect('/user/dashboard');
+            } else {
+                console.log('Redirecting to default dashboard');
+                return res.redirect('/dashboard');
+            }
+        });
     } catch (error) {
         console.error('Login error:', error);
+        console.error('Error stack:', error.stack);
         req.flash('error_msg', 'An error occurred during login. Please try again.');
         res.redirect('/login');
     }

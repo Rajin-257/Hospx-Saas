@@ -62,6 +62,20 @@ class User {
                 this.commission_type || 'percentage'
             ]);
 
+            // Add reference code to reference_codes table for executives and admins
+            if ((this.role === 'executive' || this.role === 'admin') && this.reference_code) {
+                const refCodeQuery = `
+                    INSERT INTO reference_codes (id, code, user_id, is_active)
+                    VALUES (?, ?, ?, ?)
+                `;
+                await db.executeQuery(refCodeQuery, [
+                    uuidv4(),
+                    this.reference_code,
+                    this.id,
+                    true
+                ]);
+            }
+
             // Send credentials email for executives and admins
             if ((this.role === 'executive' || this.role === 'admin') && tempPassword && this.reference_code) {
                 try {

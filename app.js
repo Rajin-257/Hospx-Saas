@@ -1,12 +1,22 @@
 const express = require('express');
 const session = require('express-session');
+const MySQLStore = require('express-mysql-session')(session);
 const flash = require('express-flash');
 const path = require('path');
 const helmet = require('helmet');
 const cors = require('cors');
+const mysql = require('mysql2/promise');
 require('dotenv').config();
 
 const app = express();
+
+// Debug logging middleware
+app.use((req, res, next) => {
+    console.log('Request URL:', req.url);
+    console.log('Session ID:', req.sessionID);
+    console.log('Session Data:', req.session);
+    next();
+});
 
 // Import database and email initialization
 const db = require('./config/database');
@@ -45,21 +55,60 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Create MySQL connection pool for session store
+const sessionPool = mysql.createPool({
+    host: process.env.DB_HOST || 'localhost',
+    port: 3306,
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'hospx_saas',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
+
+// MySQL session store configuration
+const sessionStore = new MySQLStore({
+    createDatabaseTable: true,
+    schema: {
+        tableName: 'sessions',
+        columnNames: {
+            session_id: 'session_id',
+            expires: 'expires',
+            data: 'data'
+        }
+    },
+    clearExpired: true,
+    checkExpirationInterval: 900000, // Check for expired sessions every 15 minutes
+    expiration: 86400000 // Sessions expire after 24 hours
+}, sessionPool);
+
+// Determine if we're in production with HTTPS
+const isProduction = process.env.NODE_ENV === 'production';
+const isSecure = isProduction && process.env.FORCE_HTTPS === 'true';
+
 // Session configuration
 app.use(session({
+    key: 'session_cookie_name',
     secret: process.env.SESSION_SECRET || 'your-secret-key',
-    resave: false,
-    saveUninitialized: false,
+    store: sessionStore,
+    resave: true,
+    saveUninitialized: true,
+    rolling: true,
     cookie: {
-        secure: false, // Set to true in production with HTTPS
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-    }
+        secure: isSecure,
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        sameSite: 'lax'
+    },
+    name: 'sessionId' // Explicitly set cookie name
 }));
 
 app.use(flash());
 
 // Global variables for views
 app.use((req, res, next) => {
+    console.log('Setting locals - Session user:', req.session.user);
     res.locals.user = req.session.user || null;
     res.locals.success_msg = req.flash('success_msg');
     res.locals.error_msg = req.flash('error_msg');
@@ -84,10 +133,11 @@ app.use((req, res) => {
 
 // Error handler
 app.use((err, req, res, next) => {
-    console.error(err.stack);
+    console.error('Application error:', err);
+    console.error('Error stack:', err.stack);
     res.status(500).render('error', {
-        title: '500 - Internal Server Error',
-        message: 'Something went wrong on our end.'
+        title: 'Error',
+        message: 'Something went wrong!'
     });
 });
 

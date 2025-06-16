@@ -173,7 +173,7 @@ async function sendCredentialsEmail(userEmail, userName, password, referenceCode
 // Password reset email template
 async function sendPasswordResetEmail(userEmail, userName, resetToken) {
     const subject = 'Password Reset Request - HospX Platform';
-    const resetUrl = `${process.env.APP_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
+    const resetUrl = `http://hospx.app/reset-password?token=${resetToken}`;
     
     const htmlBody = `
         <!DOCTYPE html>
