@@ -99,7 +99,7 @@ async function sendWelcomeEmail(userEmail, userName, domainName) {
                     <div class="domain-info">
                         <h3>Your Domain Details:</h3>
                         <p><strong>Website:</strong> ${domainName}</p>
-                        <p><strong>username:</strong> admin</p>
+                        <p><strong>username:</strong> softadmin</p>
                         <p><strong>password:</strong> 123</p>
                         <p><strong>Expiary:</strong> 15 days</p>
                     </div>
@@ -157,7 +157,7 @@ async function sendCredentialsEmail(userEmail, userName, password, referenceCode
                     
                     <p>You can now log in to your dashboard and access all features.</p>
                     
-                    <p><a href="${process.env.APP_URL || 'http://localhost:3000'}/login" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a></p>
+                    <p><a href="http://hospx.app/login" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a></p>
                 </div>
                 <div class="footer">
                     <p>Best regards,<br>HospX Team</p>

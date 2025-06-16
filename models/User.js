@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../config/database');
+const emailService = require('../services/emailService');
 
 class User {
     constructor(data = {}) {
@@ -23,9 +24,22 @@ class User {
     // Create new user
     async save() {
         try {
+            let tempPassword = null;
+            
+            // Auto-generate password for executives and admins if not provided
+            if ((this.role === 'executive' || this.role === 'admin') && !this.password) {
+                tempPassword = User.generatePassword(12);
+                this.password = tempPassword;
+            }
+            
             // Hash password if it exists and isn't already hashed
             if (this.password && !this.password.startsWith('$2a$')) {
                 this.password = await bcrypt.hash(this.password, 10);
+            }
+            
+            // Auto-generate reference code for executives and admins if not already provided
+            if ((this.role === 'executive' || this.role === 'admin') && !this.reference_code) {
+                this.reference_code = User.generateReferenceCode();
             }
             
             const query = `
@@ -48,7 +62,27 @@ class User {
                 this.commission_type || 'percentage'
             ]);
 
-            return { success: true, userId: this.id };
+            // Send credentials email for executives and admins
+            if ((this.role === 'executive' || this.role === 'admin') && tempPassword && this.reference_code) {
+                try {
+                    await emailService.sendCredentialsEmail(
+                        this.email,
+                        this.full_name,
+                        tempPassword,
+                        this.reference_code
+                    );
+                } catch (emailError) {
+                    console.error('Email sending error:', emailError);
+                    // Don't fail the user creation if email fails
+                }
+            }
+
+            return { 
+                success: true, 
+                userId: this.id, 
+                referenceCode: this.reference_code,
+                password: tempPassword // Return for admin reference
+            };
         } catch (error) {
             console.error('User save error:', error);
             return { success: false, error: error.message };
