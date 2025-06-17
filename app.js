@@ -10,14 +10,6 @@ require('dotenv').config();
 
 const app = express();
 
-// Debug logging middleware
-app.use((req, res, next) => {
-    console.log('Request URL:', req.url);
-    console.log('Session ID:', req.sessionID);
-    console.log('Session Data:', req.session);
-    next();
-});
-
 // Import database and email initialization
 const db = require('./config/database');
 const emailService = require('./services/emailService');
@@ -92,8 +84,8 @@ app.use(session({
     key: 'session_cookie_name',
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     store: sessionStore,
-    resave: true,
-    saveUninitialized: true,
+    resave: false,
+    saveUninitialized: false,
     rolling: true,
     cookie: {
         secure: isSecure,
@@ -106,9 +98,17 @@ app.use(session({
 
 app.use(flash());
 
+// Debug logging middleware (AFTER session middleware)
+app.use((req, res, next) => {
+    // Only log for non-static resources
+    if (!req.url.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg)$/)) {
+        console.log('Request URL:', req.url);
+    }
+    next();
+});
+
 // Global variables for views
 app.use((req, res, next) => {
-    console.log('Setting locals - Session user:', req.session.user);
     res.locals.user = req.session.user || null;
     res.locals.success_msg = req.flash('success_msg');
     res.locals.error_msg = req.flash('error_msg');

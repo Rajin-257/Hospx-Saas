@@ -111,8 +111,6 @@ router.post('/login', isNotAuthenticated, [
                 req.flash('error_msg', 'An error occurred during login. Please try again.');
                 return res.redirect('/login');
             }
-            console.log('Session saved successfully');
-            console.log('Session after save:', req.session);
             
             req.flash('success_msg', `Welcome back, ${userData.full_name}!`);
 

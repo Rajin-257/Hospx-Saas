@@ -76,6 +76,3 @@ Uses Webuzo API for:
 - Initial Sql Upload
 - Single or bulk Database Selection
 - Query Execution
-
-
-For More Info Cheak Crud_Enhancements!-------
