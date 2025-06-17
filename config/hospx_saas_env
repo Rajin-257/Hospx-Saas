@@ -1,0 +1,34 @@
+# Database Configuration
+DB_HOST=localhost
+DB_USER=hospx_tenant
+DB_PASSWORD=Hasanali@1
+DB_NAME=hospx_saas
+
+# Application Configuration
+APP_PORT=30000
+APP_ENV=production
+SESSION_SECRET=OFt7epbgeEuO+GtvEYClTJ+jRTfT0ahuSGOYuYh8qsduBbH9XKfW6n+7lzIdnS95
+
+# Webuzo API Configuration
+WEBUZO_USER=hospx
+WEBUZO_PASSWORD=J0vbue&S!8
+WEBUZO_HOST=edusoftovm.webhostns.com
+
+# SMTP Email Configuration
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=hospxsoftware@gmail.com
+SMTP_PASSWORD=pzls hwue bums suoc
+SMTP_FROM=hospxsoftware@gmail.com
+
+# Application Settings
+SUBSCRIPTION_PRICE=1000
+CURRENCY=BDT
+DEFAULT_COMMISSION_PERCENTAGE=10
+DEFAULT_COMMISSION_FIXED=50 
+
+DatabaseUser = hospx_tenant
+
+DATABASE_PREFIX = hospx_
+Suffix = 
+DOMAIN_PATH = /home/hospx/_wildcard_.hospx.app/
